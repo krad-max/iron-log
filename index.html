@@ -252,6 +252,16 @@ select.sel{background:var(--card);border:1px solid var(--line);border-radius:10p
 .setedit{display:grid;grid-template-columns:24px 1fr 1fr 32px;gap:6px;align-items:center;margin-top:6px;font-size:13px}
 .cmpcols{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;font-size:13px}
 .cmpcols div div{padding:2px 0}
+.nav{grid-template-columns:repeat(6,1fr)}
+.nav button{font-size:10px}
+.chat{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.cm{max-width:92%;padding:10px 12px;border-radius:14px;font-size:14px;line-height:1.45;background:var(--card);border:1px solid var(--line)}
+.cm.u{align-self:flex-end;background:var(--soft);border-color:transparent}
+.cm.err{border-color:var(--danger);color:var(--danger)}
+.cm .scard{margin-top:8px;padding:10px;border-radius:12px;background:var(--field)}
+.adv{padding:12px 14px;margin-top:8px}
+.adv .row{gap:8px;margin-top:10px}
+.adv .row button{flex:1}
 .legend{display:flex;gap:14px;font-size:12px;color:var(--mute);padding:2px 6px}
 .legend span::before{content:"";display:inline-block;width:14px;height:0;border-top:2px solid var(--accent);vertical-align:middle;margin-right:6px}
 .legend.lg span::before{width:12px;height:12px;border:0;border-radius:3px;background:var(--field)}
@@ -377,7 +387,7 @@ const fmtDate=ts=>new Date(ts).toLocaleDateString('fr-FR',{weekday:'short',day:'
 const restLabel=s=>(RESTS.find(r=>r[0]===s)||[0,s?s+' s':'Aucun'])[1];
 const initials=n=>n.split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const mid=r=>{const m=String(r).match(/(\d+)\D+(\d+)/);return m?Math.round((+m[1]+ +m[2])/2):10};
-const defPrefs=()=>({fav:{},stars:{},diff:{},notes:{},custom:[],bar:20,plates:[25,20,15,10,5,2.5,1.25],sound:true,goal:3,formula:'epley',plan:null,goals:[],body:[]});
+const defPrefs=()=>({fav:{},stars:{},diff:{},notes:{},custom:[],bar:20,plates:[25,20,15,10,5,2.5,1.25],sound:true,goal:3,formula:'epley',advice:[],aiModel:'claude-sonnet-5-5',deloadUntil:0,rem:{on:false,lead:30,qFrom:'22:00',qTo:'07:00',times:['18:30','18:30','18:30','18:30','18:30','18:30','18:30'],off:{},weigh:true,weighDay:0,weighTime:'08:00',backup:true},plan:null,goals:[],body:[]});
 
 /* ───────── État ───────── */
 const S={tab:'today',q:'',group:null,equip:null,minStars:0,diffF:'',mech:'',favOnly:false,sort:'stars',
@@ -487,7 +497,7 @@ function push(){const e=E();if(!e)return;e.undo.push(JSON.stringify(e.draft));if
 function updateUndo(){const e=E();if(!e)return;const u=$('#undo'),r=$('#redo');if(u)u.disabled=!e.undo.length;if(r)r.disabled=!e.redo.length}
 
 /* ───────── Icônes ───────── */
-const IC={
+const IC={coach:'<path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>',
   today:'<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',sessions:'<path d="M4 7h16M4 12h16M4 17h10"/>',
   lib:'<path d="M6 6v12M18 6v12M3 9v6M21 9v6M6 12h12"/>',prog:'<path d="M4 19V5M4 19h16M8 15l4-5 3 3 5-7"/>',
   profile:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>',
@@ -542,6 +552,7 @@ function tplCard(t){
 /* ───────── Programme (cycle), séance du jour ───────── */
 const WD=['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
 const PHRASES=['Une série après l\'autre.','La régularité bat l\'intensité.','Technique d\'abord, charge ensuite.','Aujourd\'hui compte autant que demain.','Petit progrès, grand effet sur trois mois.','Écoute ton corps, tiens ton plan.'];
+function refToday(){const p=S.prefs.plan;if(!p)return'';const k=dayKey(Date.now());return p.over&&k in p.over?p.over[k]:p.days[todayIdx()]}
 function planInfo(){const p=S.prefs.plan;if(!p)return null;const m=monday(Date.now()),w=Math.max(0,Math.round((m-p.start)/(7*DAYMS)));
   return{p,w,weeks:p.weeks,done:w>=p.weeks,deload:!!p.deload&&p.weeks>=3&&w===p.weeks-1}}
 const dayStart=t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()};
@@ -556,13 +567,13 @@ function weekDotsHTML(){const pi=planInfo(),td=todayIdx(),m=monday(Date.now()),L
 function planCardHTML(){
   const pi=planInfo();
   if(!pi)return `<div class="card" style="padding:16px"><span class="label">Programme</span><p class="small" style="margin:8px 0 12px">Planifie ta semaine : quels jours, quelle séance, avec une semaine de décharge à la fin du cycle.</p><button class="btn ghost block" data-act="plan-edit">Créer mon programme</button></div>`;
-  const ref=pi.p.days[todayIdx()],did=S.sessions.some(x=>dayKey(x.startedAt)===dayKey(Date.now()));
+  const ref=refToday(),did=S.sessions.some(x=>dayKey(x.startedAt)===dayKey(Date.now()));
   let body='';
   if(pi.done)body=`<p class="small" style="margin:10px 0 12px">Cycle terminé (${pi.weeks} semaines). Bravo.</p><button class="btn primary block" data-act="plan-restart">Recommencer un cycle</button>`;
   else if(!ref||!refName(ref))body=`<p class="small mute" style="margin:10px 0 0">Jour de repos${did?' (tu as quand même bougé, bien joué)':''}.</p>`;
   else{const d=refDraft(ref),st=stats(d),last=S.sessions.find(x=>x.name===d.name);
     body=`<div style="margin-top:10px"><div class="b" style="font-size:16px">${esc(d.name)}</div><div class="mute small">${st.exos} exos · ${st.sets} séries · ~${fmtDur(st.dur)}</div>${last?`<div class="mute small" style="margin-top:2px">Dernière fois : ${fmtDate(last.startedAt)}, ${Math.round(sesVol(last)).toLocaleString('fr-FR')} kg</div>`:''}</div>
-     ${pi.deload?`<div class="sug warn" style="margin:10px 0 0"><span class="sp"><b>Semaine de décharge</b> : charges −10 %, séries −40 %, pour récupérer.</span></div>`:''}
+     ${(pi.deload||S.prefs.deloadUntil>Date.now())?`<div class="sug warn" style="margin:10px 0 0"><span class="sp"><b>Semaine de décharge</b> : charges −10 %, séries −40 %, pour récupérer.</span></div>`:''}
      ${did?`<p class="small" style="margin:10px 0 0"><b>Séance faite aujourd'hui ✓</b></p>`:`<button class="btn primary block" data-act="plan-start" style="margin-top:12px">Démarrer</button>`}`}
   return `<div class="card" style="padding:16px"><div class="row"><span class="label sp">Programme · ${esc(pi.p.name)}</span><span class="badge">${pi.done?'Terminé':'Sem. '+(pi.w+1)+'/'+pi.weeks+(pi.deload?' · décharge':'')}</span></div>${weekDotsHTML()}${body}<button class="link" data-act="plan-edit" style="margin-top:12px">Modifier le programme ›</button></div>`}
 function planForm(){const p=S.prefs.plan;const f={name:p?p.name:'Mon programme',weeks:String(p?p.weeks:6),deload:p?(p.deload?'1':'0'):'1',prog:String(p?p.prog:2.5)};for(let i=0;i<7;i++)f['d'+i]=p?p.days[i]||'':'';return f}
@@ -578,14 +589,14 @@ function planSheet(){const f=S.sheet.f,opt=(arr,cur)=>arr.map(([v,l])=>`<option 
    <p class="mute small" style="margin-top:10px">« Progression » : à chaque séance du programme, la charge proposée est la dernière charge +X %. Ajuste-la pendant la séance si besoin.</p></div>
    <div class="pfoot"><button class="btn primary block" data-act="plan-save">Enregistrer le programme</button>${S.prefs.plan?`<button class="btn ghost block" data-act="plan-restart">Repartir de la semaine 1</button><button class="btn danger block" data-act="plan-del-ask">Supprimer le programme</button>`:''}</div>`,true)}
 function startPlanned(){
-  const pi=planInfo();if(!pi||pi.done)return;const ref=pi.p.days[todayIdx()],d=ref&&refDraft(ref);if(!d){toast('Pas de séance prévue aujourd\'hui');return}
+  const pi=planInfo();if(!pi||pi.done)return;const ref=refToday(),d=ref&&refDraft(ref);const dl=pi.deload||(S.prefs.deloadUntil>Date.now());if(!d){toast('Pas de séance prévue aujourd\'hui');return}
   d.cycle=pi.p.name;openEditor(d);A.start();
-  const e=E(),f=pi.deload?0.9:(pi.w>0?1+(pi.p.prog||0)/100:1);
+  const e=E(),f=dl?0.9:(pi.w>0?1+(pi.p.prog||0)/100:1);
   e.draft.items.forEach(it=>{
-    if(pi.deload){let c=0;const n=it.sets.filter(x=>x.type!=='warmup').length,keep=Math.max(1,Math.ceil(n*0.6));it.sets=it.sets.filter(x=>x.type==='warmup'||(++c<=keep))}
+    if(dl){let c=0;const n=it.sets.filter(x=>x.type!=='warmup').length,keep=Math.max(1,Math.ceil(n*0.6));it.sets=it.sets.filter(x=>x.type==='warmup'||(++c<=keep))}
     if(f!==1)it.sets.forEach(x=>{if(x.type!=='warmup'&&x.kg>0)x.kg=Math.round(x.kg*f/1.25)*1.25})});
-  e.plan={w:pi.w,deload:pi.deload};saveRun();render();
-  toast(pi.deload?'Semaine de décharge : charges −10 %, séries −40 %':(f!==1?'Charges proposées : +'+fmtN(pi.p.prog)+' % par rapport à la dernière fois':'Bonne séance !'))}
+  e.plan={w:pi.w,deload:dl};saveRun();render();
+  toast(dl?'Semaine de décharge : charges −10 %, séries −40 %':(f!==1?'Charges proposées : +'+fmtN(pi.p.prog)+' % par rapport à la dernière fois':'Bonne séance !'))}
 
 /* ───────── Objectifs et suivi corporel ───────── */
 const GK={e1:'1RM estimé',kg:'Charge max',body:'Poids de corps'};
@@ -659,15 +670,169 @@ function balanceHTML(){
   const msg=r==null?'Aucun tirage enregistré : ajoute du dos pour protéger tes épaules.':r>1.3?`Poussée/tirage ${fmtN(Math.round(r*10)/10)} : tu pousses plus que tu ne tires. Ajoute des séries de dos ou d'arrière d'épaule.`:r<0.77?`Poussée/tirage ${fmtN(Math.round(r*10)/10)} : tu tires plus que tu ne pousses.`:`Poussée/tirage ${fmtN(Math.round(r*10)/10)} : bien équilibré.`;
   return `<div class="sec"><span class="label">Équilibre · 28 derniers jours</span><div class="card" style="padding:12px 16px">${[['Poussée',c.push],['Tirage',c.pull],['Jambes',c.legs]].map(([l,v])=>`<div class="mbar"><span>${l}</span><div class="tr" role="img" aria-label="${l} : ${v} séries"><div class="fl" style="width:${v/tot*100}%"></div></div><b>${Math.round(v/tot*100)} %</b></div>`).join('')}<p class="small" style="margin:8px 0 0">${msg}</p></div></div>`}
 
+/* ───────── Coach : règles locales ───────── */
+function recovery(){const out={},now=Date.now();GROUPS.forEach(g=>out[g.l]={pct:100,last:null,sets:0,pain:false});
+  S.sessions.slice().sort((a,b)=>b.startedAt-a.startedAt).forEach(se=>{muscleCounts(se).forEach(([l,n])=>{const o=out[l];if(!o)return;
+    if(se.pain===l&&now-se.startedAt<7*DAYMS)o.pain=true;if(o.last||n<1)return;o.last=se.startedAt;o.sets=n;
+    const rp=[].concat(...se.entries.map(en=>en.sets.filter(x=>x.rpe).map(x=>x.rpe))),ar=rp.length?rp.reduce((a,b)=>a+b,0)/rp.length:7.5,
+      need=Math.min(96,36+6*Math.max(0,n-4))+(ar>=9?12:0)+(se.energy&&se.energy<=2?12:0);
+    o.need=need;o.pct=Math.max(0,Math.min(100,Math.round((now-se.startedAt)/3600000/need*100)))})});return out}
+function ppl28(){const from=Date.now()-28*DAYMS,c={push:0,pull:0,legs:0};S.sessions.filter(x=>x.startedAt>=from).forEach(se=>se.entries.forEach(en=>{const e=EXMAP[en.exId];if(!e)return;const n=en.sets.filter(x=>x.type!=='warmup').length,m=e.p[0];
+  if(PUSHM.includes(m))c.push+=n;else if(PULLM.includes(m))c.pull+=n;else if(LEGM.includes(m))c.legs+=n}));return c}
+function coachAdvice(){const out=[],now=Date.now(),done=new Set((S.prefs.advice||[]).map(a=>a.key));
+  Object.keys(HIST).filter(id=>HIST[id][0].t>now-30*DAYMS).forEach(id=>{const g=suggest(id);if(g&&g.plateau&&out.filter(a=>a.type==='plateau').length<3)out.push({key:'pl:'+id+':'+HIST[id][0].t,type:'plateau',title:'Stagnation · '+EXMAP[id].n,text:'3 séances sans progrès de 1RM estimé. Pistes : changer la fourchette de reps, ajouter une série, passer à une variante, ou prévoir une semaine de décharge.'})});
+  const rp=(a,b)=>{const v=[];S.sessions.filter(x=>x.startedAt>=a&&x.startedAt<b).forEach(se=>se.entries.forEach(en=>en.sets.forEach(x=>{if(x.rpe)v.push(x.rpe)})));return v.length>=6?v.reduce((x,y)=>x+y,0)/v.length:null},
+    r1=rp(now-14*DAYMS,now+1),r0=rp(now-42*DAYMS,now-14*DAYMS),sw=streakWeeks(),pi=planInfo();
+  if(!(pi&&pi.deload)&&!(S.prefs.deloadUntil>now)&&(sw>=6||(r1&&r0&&r1-r0>=0.7)))out.push({key:'dl:'+monday(now),type:'deload',title:'Semaine de décharge conseillée',text:sw>=6?`${sw} semaines d'entraînement d'affilée : une semaine plus légère aide à récupérer et à repartir plus fort.`:`Ton effort perçu (RPE) monte (${r0.toFixed(1)} → ${r1.toFixed(1)}) : signe de fatigue accumulée.`,apply:'deload',label:'Activer la décharge'});
+  const rec=recovery();if(S.sessions.length>=3)GROUPS.forEach(g=>{const o=rec[g.l],d=o.last?Math.floor((now-o.last)/DAYMS):null;if(g.id!=='avb'&&(d==null||d>=10))out.push({key:'ng:'+g.id+':'+monday(now),type:'neglect',title:g.l+' oublié',text:d==null?`Aucune série de ${g.l.toLowerCase()} enregistrée.`:`Aucune série de ${g.l.toLowerCase()} depuis ${d} jours.`})});
+  const c=ppl28(),r=c.pull?c.push/c.pull:null;if(c.push+c.pull>=12&&(r==null||r>1.3||r<0.77))out.push({key:'pp:'+monday(now),type:'balance',title:'Poussée / tirage déséquilibrés',text:r==null||r>1.3?'Tu pousses nettement plus que tu ne tires : ajoute des séries de dos et d\'arrière d\'épaule pour protéger tes épaules.':'Tu tires nettement plus que tu ne pousses : ajoute des séries de pectoraux ou d\'épaules.'});
+  return out.filter(a=>!done.has(a.key))}
+function logAdvice(a,status){const L=S.prefs.advice=S.prefs.advice||[];L.unshift({key:a.key,t:Date.now(),title:a.title,status});S.prefs.advice=L.slice(0,40);persist('prefs')}
+
+/* ───────── Générateur de séance (hors-ligne) ───────── */
+const EQSETS={all:null,home:['haltères','poids du corps','élastiques','kettlebell'],body:['poids du corps']};
+const FOCUS={push:['pec','epaules','triceps'],pull:['dos','biceps'],legs:['jambes','mollets','abdos'],upper:['pec','dos','epaules','biceps','triceps'],full:['pec','dos','jambes','epaules','abdos']};
+function genSession(min,focus,eq){const rec=recovery();let gids;
+  if(focus==='auto'){const c=GROUPS.filter(g=>g.id!=='avb'&&rec[g.l].pct>=70).sort((a,b)=>(rec[a.l].last||0)-(rec[b.l].last||0));gids=c.slice(0,4).map(g=>g.id);if(gids.length<2)gids=FOCUS.full}else gids=FOCUS[focus];
+  const allow=EQSETS[eq],n=Math.max(3,Math.min(8,Math.round(min/9)));
+  const pool=gid=>{const g=GROUPS.find(x=>x.id===gid);return EXOS.filter(e=>g.m.includes(e.p[0])&&(!allow||allow.includes(e.eq))).sort((a,b)=>stars(b)-stars(a)||(b.m?1:0)-(a.m?1:0)||diff(a)-diff(b))};
+  const pools=gids.map(pool).filter(l=>l.length),picks=[];
+  for(let r=0;picks.length<n&&r<4;r++)pools.forEach(l=>{if(picks.length<n&&l[r]&&!picks.includes(l[r]))picks.push(l[r])});
+  picks.sort((a,b)=>(b.m?1:0)-(a.m?1:0));
+  const d={id:uid(),name:'Séance '+min+' min',cycle:'Cycle 1',items:picks.map(e=>makeItem(e.id,e.m&&min>=60?4:3)),updated:Date.now()};
+  while(est(d)>min*60){const iso=d.items.find(it=>it.sets.length>2&&!EXMAP[it.exId].m);if(iso){iso.sets.pop();continue}if(d.items.length>3){d.items.pop();continue}const big=d.items.find(it=>it.sets.length>2);if(big){big.sets.pop();continue}break}
+  return d}
+function genSheet(){const f=S.sheet.f,opt=(a,c)=>a.map(([v,l])=>`<option value="${v}" ${String(c)===String(v)?'selected':''}>${l}</option>`).join('');
+  return panel(`<div class="ptitle">Générer une séance</div><div class="pbody"><p class="mute small" style="margin:0 0 10px">Construite hors-ligne avec les meilleurs exercices de ta bibliothèque (étoiles), les muscles récupérés et le temps dont tu disposes.</p>
+   <label class="label">Temps disponible</label><select class="field" data-ex="min" style="margin:6px 0 12px">${opt([[30,'30 min'],[45,'45 min'],[60,'1 heure'],[75,'1 h 15'],[90,'1 h 30']],f.min)}</select>
+   <label class="label">Objectif du jour</label><select class="field" data-ex="focus" style="margin:6px 0 12px">${opt([['auto','Automatique (muscles récupérés)'],['push','Poussée'],['pull','Tirage'],['legs','Jambes et abdos'],['upper','Haut du corps'],['full','Corps entier']],f.focus)}</select>
+   <label class="label">Matériel</label><select class="field" data-ex="eq" style="margin:6px 0 0">${opt([['all','Salle complète'],['home','Haltères, élastiques, kettlebell'],['body','Poids du corps']],f.eq)}</select></div>
+   <div class="pfoot"><button class="btn primary block" data-act="gen-go">Générer</button><button class="btn ghost block" data-act="sheet-close">Annuler</button></div>`)}
+
+/* ───────── Coach IA (API Claude, optionnel) ───────── */
+const aiKey=()=>{try{return localStorage.getItem('il-key')||''}catch(e){return''}};
+let chatDraft='';
+function chatLoad(){if(S.chat)return S.chat;try{S.chat=JSON.parse(localStorage.getItem('il-chat')||'[]')}catch(e){S.chat=[]}return S.chat}
+function chatSave(){try{localStorage.setItem('il-chat',JSON.stringify((S.chat||[]).slice(-30)))}catch(e){}}
+function aiContext(){const now=Date.now(),D=[],wk=[];
+  for(let w=11;w>=0;w--){const a=monday(now)-w*7*DAYMS,b=a+7*DAYMS,ss=S.sessions.filter(x=>x.startedAt>=a&&x.startedAt<b);wk.push({sem:fmtD(a),seances:ss.length,series:ss.reduce((t,x)=>t+sesSets(x),0)})}
+  const ex=Object.keys(HIST).map(id=>{const st=exStats(id).filter(x=>x.t>now-84*DAYMS);if(!st.length)return null;const l=st[st.length-1];return{id,nom:EXMAP[id].n,seances:st.length,e1rm_debut:Math.round(st[0].e1),e1rm_fin:Math.round(l.e1),max_kg:Math.max(...st.map(x=>x.kg))}}).filter(Boolean).sort((a,b)=>b.seances-a.seances).slice(0,12);
+  const mus=weekMuscles(now-28*DAYMS),rec=recovery(),pi=planInfo(),last=S.sessions[0],B=bodyList().filter(x=>x.kg>0);
+  const c={date:new Date().toLocaleDateString('fr-FR'),programme:pi?{nom:pi.p.name,semaine:(pi.w+1)+'/'+pi.weeks,decharge:pi.deload,jours:pi.p.days.map((r,i)=>r?WD[i]+' : '+refName(r):null).filter(Boolean)}:null,
+    objectifs:(S.prefs.goals||[]).map(g=>{const i=goalInfo(g);return{type:GK[g.kind],exercice:g.exId&&EXMAP[g.exId]?EXMAP[g.exId].n:'poids de corps',cible:g.target,actuel:i.cur!=null?Math.round(i.cur):null,estimation:i.est}}),
+    semaines:wk,exercices:ex,series_par_muscle_28j:Object.fromEntries(Object.entries(mus).map(([k,v])=>[k,Math.round(v)])),recuperation_pct:Object.fromEntries(Object.entries(rec).map(([k,v])=>[k,v.pct])),
+    poussee_tirage_jambes_28j:ppl28(),poids_corps:B.length?{debut:B[0].kg,actuel:B[B.length-1].kg}:null,
+    derniere_seance:last?{nom:last.name,date:fmtD(last.startedAt),energie:last.energy||null,gene:last.pain||null,note:last.note||null,exercices:last.entries.map(en=>({nom:EXMAP[en.exId]?EXMAP[en.exId].n:'?',series:en.sets.filter(x=>x.type!=='warmup').map(x=>(x.kg||0)+'x'+(x.reps||0)+(x.rpe?'@'+x.rpe:''))}))}:null,
+    materiel:{barre_kg:S.prefs.bar||20,disques:S.prefs.plates,pas_kg:S.step},formule_1rm:S.prefs.formula||'epley'};
+  return JSON.stringify(c)}
+function aiSystem(){return `Tu es le coach de musculation intégré à l'application personnelle Iron Log. Tu parles français, de façon claire, concrète et sobre, sans jargon inutile ni flatterie.
+Règles : tu ne poses jamais de diagnostic médical ; en cas de douleur persistante ou inhabituelle tu recommandes de consulter un professionnel de santé ; tu signales toute proposition qui augmenterait le volume de plus de 10 à 15 % par semaine ; tu proposes, tu n'imposes jamais (l'utilisateur décide d'appliquer ou non). Réponses courtes (une dizaine de lignes maximum) sauf demande de bilan détaillé.
+Si on te demande une séance ou un programme, écris d'abord 2 à 3 lignes d'explication, puis UN bloc \`\`\`json avec exactement ce format : {"name":"Nom","items":[{"exId":"<id>","sets":3,"reps":"8-10","rest":90}]}. N'utilise QUE des identifiants de la liste ci-dessous.
+Données de l'utilisateur (JSON) : ${aiContext()}
+Exercices disponibles (id=nom) : ${EXOS.map(e=>e.id+'='+e.n).join('; ')}`}
+async function aiCall(msgs,extra){const key=aiKey();if(!key)throw new Error('Pas de clé API.');
+  let m=msgs.filter(x=>!x.err).slice(-12);while(m.length&&m[0].r!=='u')m.shift();
+  let r;try{r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:S.prefs.aiModel||'claude-sonnet-5-5',max_tokens:1600,system:aiSystem()+(extra||''),messages:m.map(x=>({role:x.r==='u'?'user':'assistant',content:x.t}))})})}catch(e){throw new Error('Impossible de joindre l\'API (hors-ligne ou réseau bloqué).')}
+  if(!r.ok){let t='';try{t=(await r.json()).error.message}catch(e){}throw new Error(r.status===401?'Clé API refusée.':'Erreur '+r.status+(t?' : '+t:''))}
+  const j=await r.json();return (j.content||[]).map(x=>x.text||'').join('')}
+function aiSession(t){const m=String(t).match(/```json\s*([\s\S]*?)```/);if(!m)return null;
+  try{const j=JSON.parse(m[1]),items=(j.items||[]).filter(x=>x&&EXMAP[x.exId]).slice(0,12).map(x=>({exId:x.exId,sets:Math.max(1,Math.min(8,+x.sets||3)),reps:typeof x.reps==='string'?mid(x.reps):(+x.reps||null),rest:x.rest>=0?Math.min(300,+x.rest):null}));
+    return items.length?{name:String(j.name||'Séance du coach').slice(0,60),items}:null}catch(e){return null}}
+function chatMsgHTML(m,i){const ses=m.r==='a'?aiSession(m.t):null,txt=String(m.t).replace(/```json[\s\S]*?```/g,'').trim();
+  let h=`<div class="cm ${m.r}${m.err?' err':''}">${esc(txt).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>')}`;
+  if(ses){const tot=ses.items.reduce((a,x)=>a+x.sets,0),last=S.sessions.slice(0,8),avg=last.length?last.reduce((a,x)=>a+sesSets(x),0)/last.length:0,warn=avg&&tot>avg*1.15;
+    h+=`<div class="scard"><b>${esc(ses.name)}</b><div class="mute small">${ses.items.length} exos · ${tot} séries</div>${ses.items.map(x=>`<div class="small">${esc(EXMAP[x.exId].n)} · ${x.sets}×${x.reps||'?'}</div>`).join('')}${warn?`<div class="small" style="color:var(--danger);margin-top:6px">Attention : ${Math.round((tot/avg-1)*100)} % de séries en plus que ta moyenne récente.</div>`:''}<button class="btn primary block" data-act="ai-import" data-i="${i}" style="margin-top:10px">Importer dans l'éditeur</button></div>`}
+  return h+'</div>'}
+const QUICK=[['Bilan de ma semaine','Fais le bilan de ma semaine : progrès, points faibles et 3 actions concrètes.'],['Analyser ma dernière séance','Analyse ma dernière séance : volume, intensité, séries trop proches ou trop loin de l\'échec.'],['Générer une séance','Génère-moi une séance d\'environ 60 minutes adaptée à mon état de récupération actuel.'],['Pourquoi je stagne ?','Pourquoi est-ce que je stagne ? Regarde mes exercices en plateau et propose des changements.']];
+async function aiSend(text){text=(text||'').trim();if(!text||S.chatBusy)return;const c=chatLoad();c.push({r:'u',t:text});chatDraft='';S.chatBusy=true;chatSave();render();scrollChat();
+  try{const a=await aiCall(c);c.push({r:'a',t:a})}catch(e){c.push({r:'a',t:'⚠ '+e.message,err:true})}
+  S.chatBusy=false;chatSave();render();scrollChat()}
+function scrollChat(){const m=$('#main');if(m)m.scrollTo(0,m.scrollHeight)}
+
+function coachTab(){
+  const rec=recovery(),adv=coachAdvice(),key=aiKey(),hist=(S.prefs.advice||[]).slice(0,6);
+  const best=GROUPS.filter(g=>g.id!=='avb').map(g=>[g.l,rec[g.l]]).filter(x=>x[1].pct>=90).map(x=>x[0].toLowerCase());
+  return `<div class="page-head"><div class="label">Assistant</div><h1>Coach</h1></div>
+  <div class="sec" style="margin-top:6px"><span class="label">Récupération par muscle</span><div class="card" style="padding:12px 16px">
+   ${GROUPS.map(g=>{const o=rec[g.l];return `<div class="mbar"><span>${g.l}</span><div class="tr" role="img" aria-label="${g.l} : récupéré à ${o.pct} %"><div class="fl" style="width:${o.pct}%;${o.pct<60?'background:var(--tW)':''}"></div></div><b>${o.pct} %</b></div>`}).join('')}
+   <p class="small mute" style="margin:8px 0 0">${best.length?'Prêts pour une séance : '+best.slice(0,5).join(', ')+'. ':''}Estimation d'après le volume, les jours écoulés, l'effort perçu et ton énergie. Une gêne signalée récemment ralentit le score.</p>
+   ${GROUPS.filter(g=>rec[g.l].pain).length?`<div class="sug warn" style="margin:8px 0 0"><span class="sp">Gêne signalée récemment : <b>${GROUPS.filter(g=>rec[g.l].pain).map(g=>g.l).join(', ')}</b>. Ménage cette zone ; si la douleur persiste, vois un professionnel de santé.</span></div>`:''}</div></div>
+  <div class="sec"><span class="label">Conseils du moment</span>${adv.length?adv.map(a=>`<div class="card adv"><div class="b">${esc(a.title)}</div><div class="small mute" style="margin-top:4px">${esc(a.text)}</div><div class="row">${a.apply?`<button class="btn primary" data-act="adv-apply" data-k="${esc(a.key)}">${a.label}</button>`:`<button class="btn ghost" data-act="adv-ok" data-k="${esc(a.key)}">C'est noté</button>`}<button class="btn ghost" data-act="adv-no" data-k="${esc(a.key)}">Ignorer</button></div></div>`).join(''):'<div class="card empty">Rien à signaler : continue comme ça. Les conseils (plateau, fatigue, équilibre, muscles oubliés) apparaissent ici.</div>'}</div>
+  <div class="sec"><span class="label">Générateur de séance</span><div class="card" style="padding:14px 16px"><p class="small" style="margin:0 0 12px">« Il me reste 45 minutes » : une séance équilibrée en un tap, sans connexion.</p><button class="btn ghost block" data-act="gen-open">Générer une séance</button></div></div>
+  <div class="sec"><span class="label">Coach IA · optionnel</span><div class="card" style="padding:14px 16px">
+   ${key?`<div class="chips" style="margin:0 0 8px;flex-wrap:wrap;margin-right:0">${QUICK.map(([l,q],i)=>`<button class="chip" data-act="chat-quick" data-i="${i}">${l}</button>`).join('')}</div>
+    <div class="chat" id="chat">${chatLoad().map(chatMsgHTML).join('')||'<p class="small mute" style="margin:6px 0">Pose une question ou touche une suggestion. Le coach connaît tes séances, tes records, ton programme et ta récupération.</p>'}${S.chatBusy?'<div class="cm a"><span class="mute">Le coach réfléchit…</span></div>':''}</div>
+    <textarea id="chat-in" class="field" rows="2" placeholder="Pose ta question…" aria-label="Question au coach">${esc(chatDraft)}</textarea><button class="btn primary block" data-act="chat-send" style="margin-top:8px" ${S.chatBusy?'disabled':''}>Envoyer</button>
+    <div class="row" style="margin-top:10px"><button class="link sp" style="text-align:left" data-act="chat-clear">Effacer la conversation</button><button class="link" data-act="ai-key-del">Retirer la clé</button></div>
+    <label class="small mute" style="display:block;margin-top:8px">Modèle<input id="ai-model" class="field" value="${esc(S.prefs.aiModel||'claude-sonnet-5-5')}" style="margin-top:4px"></label>`
+   :`<p class="small" style="margin:0 0 10px">Discute avec un coach qui connaît tes données : bilans, analyse de séance, séances sur mesure importables en un tap. Il faut une clé API Anthropic (console.anthropic.com).</p>
+    <input id="ai-key" type="password" class="field" placeholder="sk-ant-…" autocomplete="off" aria-label="Clé API Anthropic"><button class="btn primary block" data-act="ai-key-save" style="margin-top:8px">Enregistrer la clé</button>`}
+   <p class="mute small" style="margin:10px 0 0">La clé reste uniquement sur cet appareil (jamais synchronisée) et n'est envoyée qu'à l'API d'Anthropic. Un résumé compact de tes données est envoyé avec chaque question. L'app fonctionne sans le coach IA. Le coach ne remplace ni un médecin ni un coach en salle.</p></div></div>
+  ${hist.length?`<div class="sec"><span class="label">Conseils suivis</span><div class="card" style="padding:4px 16px">${hist.map(a=>`<div class="sumrow"><span>${esc(a.title)}</span><span class="mute small">${a.status==='ignored'?'ignoré':'suivi'} · ${fmtD(a.t)}</span></div>`).join('')}</div></div>`:''}`}
+function coachRunSheet(){const e=E(),sh=S.sheet,rec=recovery();
+  const rows=e.draft.items.map(it=>{const g=suggest(it.exId),ex=EXMAP[it.exId];if(!g)return `<div class="sumrow"><span>${esc(ex.n)}</span><span class="mute small">première fois</span></div>`;
+    return `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div class="b" style="font-size:14px">${esc(ex.n)}</div><div class="small mute">Dernière fois ${fmtN(g.last.kg)||0} × ${g.last.reps} → essaie <b style="color:var(--ink)">${fmtN(g.kg)} × ${g.reps}</b>${g.mode==='charge'?' (haut de fourchette atteint)':''}</div>${g.plateau?'<div class="small" style="color:var(--danger);margin-top:2px">Stagnation : 3 séances sans progrès. Varie la fourchette de reps ou prévois une décharge.</div>':''}</div>`}).join('');
+  return panel(`<div class="ptitle">Coach</div><div class="pbody">${rows}
+   ${aiKey()?`<div class="sec-t label">Demander au coach IA</div><textarea id="cr-q" class="field" rows="2" placeholder="Une question sur cette séance ?" data-cr="1">${esc(sh.q||'')}</textarea><button class="btn primary block" data-act="cr-ask" style="margin-top:8px" ${sh.busy?'disabled':''}>${sh.busy?'…':'Demander'}</button>${sh.ans?`<div class="cm a${sh.err?' err':''}" style="margin-top:10px;max-width:100%">${esc(sh.ans).replace(/\n/g,'<br>')}</div>`:''}`:'<p class="mute small" style="margin-top:12px">Ajoute une clé API dans l\'onglet Coach pour poser des questions.</p>'}</div>
+   <div class="pfoot"><button class="btn ghost block" data-act="sheet-close">Fermer</button></div>`,true)}
+
+/* ───────── Rappels ───────── */
+const remGet=()=>Object.assign({on:false,lead:30,qFrom:'22:00',qTo:'07:00',times:[],off:{},weigh:true,weighDay:0,weighTime:'08:00',backup:true},S.prefs.rem||{});
+const hmin=t=>{const [h,m]=String(t||'0:0').split(':');return (+h||0)*60+(+m||0)};
+const notifOK=()=>('Notification' in window)&&Notification.permission==='granted';
+function notify(title,body,tag){try{if(!notifOK())return false;
+  if(navigator.serviceWorker&&navigator.serviceWorker.getRegistration){navigator.serviceWorker.getRegistration().then(r=>{if(r&&r.showNotification)r.showNotification(title,{body,tag,icon:'icon-192.png',badge:'icon-192.png'});else new Notification(title,{body,tag})}).catch(()=>{try{new Notification(title,{body,tag})}catch(e){}})}else new Notification(title,{body,tag});return true}catch(e){return false}}
+function inQuiet(r){const n=new Date(),m=n.getHours()*60+n.getMinutes(),f=hmin(r.qFrom),t=hmin(r.qTo);return f<=t?(m>=f&&m<t):(m>=f||m<t)}
+function smartMsg(ref){const d=refDraft(ref);if(!d)return'';const last=S.sessions.find(x=>x.name===d.name);let s=d.name+' aujourd\'hui';
+  if(last&&last.entries[0]){const en=last.entries[0],t=work(en.sets).reduce((a,x)=>x.kg>a.kg?x:a,{kg:0,reps:0});if(t.kg>0)s+=` — dernière fois ${fmtN(t.kg)} kg × ${t.reps} (${EXMAP[en.exId]?EXMAP[en.exId].n:''}), tu peux faire mieux.`}return s}
+function remBanners(){const r=remGet(),pi=planInfo(),out=[],k=dayKey(Date.now());let hid={};try{hid=JSON.parse(localStorage.getItem('il-hide')||'{}')}catch(e){}
+  if(pi&&!pi.done){const p=pi.p,yi=(todayIdx()+6)%7,yk=dayKey(Date.now()-DAYMS),ref=p.over&&yk in p.over?p.over[yk]:p.days[yi];
+    if(ref&&refName(ref)&&Date.now()-DAYMS>=dayStart(p.created||0)&&!S.sessions.some(x=>dayKey(x.startedAt)===yk)&&!(p.seen&&p.seen[yk]))
+      out.push(`<div class="card adv"><div class="b">Séance manquée : ${esc(refName(ref))}</div><div class="small mute" style="margin-top:4px">Tu n'as pas fait ta séance d'hier. La décaler à aujourd'hui ?</div><div class="row"><button class="btn primary" data-act="rem-move">Décaler</button><button class="btn ghost" data-act="rem-skip">Passer</button><button class="btn ghost" data-act="rem-rest">Repos</button></div></div>`)}
+  if(r.on){const last=S.sessions[0];if(last&&Date.now()-last.startedAt>=5*DAYMS&&!hid['in'+k])out.push(`<div class="sug warn"><span class="sp">${Math.floor((Date.now()-last.startedAt)/DAYMS)} jours sans séance. Même une séance courte compte.</span><button class="link" data-act="rem-hide" data-k="in">Plus tard</button></div>`)}
+  if(r.on&&r.weigh&&!bodyList().some(x=>Date.now()-x.t<7*DAYMS)&&todayIdx()>=r.weighDay&&!hid['w'+k])out.push(`<div class="sug warn"><span class="sp"><b>Pesée de la semaine</b> : note ton poids et tes mensurations.</span><button class="link" data-act="body-add">Noter</button><button class="link" data-act="rem-hide" data-k="w">Plus tard</button></div>`);
+  let lb=0;try{lb=+localStorage.getItem('il-lastbackup')||0}catch(e){}
+  if(r.on&&r.backup&&S.sessions.length>=3&&Date.now()-lb>30*DAYMS&&!hid['b'+k])out.push(`<div class="sug warn"><span class="sp"><b>Sauvegarde mensuelle</b> : exporte tes données (Profil).</span><button class="link" data-act="rem-hide" data-k="b">Plus tard</button></div>`);
+  return out.join('')}
+function checkReminders(){try{const r=remGet();if(!r.on||!notifOK()||inQuiet(r))return;
+  const now=new Date(),nm=now.getHours()*60+now.getMinutes(),k=dayKey(now.getTime()),sent=JSON.parse(localStorage.getItem('il-sent')||'{}'),mark=key=>{sent[key]=1;localStorage.setItem('il-sent',JSON.stringify(sent))},pi=planInfo();
+  if(pi&&!pi.done){const ref=refToday(),i=todayIdx();if(ref&&refName(ref)&&!(r.off||{})[i]&&!S.sessions.some(x=>dayKey(x.startedAt)===k)){const t=hmin((r.times||[])[i]||'18:30');
+    if(nm>=t-r.lead&&nm<t+120&&!sent['s'+k]){mark('s'+k);notify('Iron Log · séance du jour',smartMsg(ref),'seance')}}}
+  if(r.weigh&&todayIdx()===r.weighDay&&nm>=hmin(r.weighTime)&&nm<hmin(r.weighTime)+240&&!sent['w'+k]&&!bodyList().some(x=>dayKey(x.t)===k)){mark('w'+k);notify('Iron Log · pesée','Note ton poids et tes mensurations de la semaine.','pesee')}}catch(e){}}
+function icsEsc(t){return String(t).replace(/\\/g,'\\\\').replace(/;/g,'\;').replace(/,/g,'\\,').replace(/\n/g,'\\n')}
+function icsDT(d,min){const p=n=>String(n).padStart(2,'0');return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'T'+p(Math.floor(min/60)%24)+p(min%60)+'00'}
+function nextDow(i){const d=new Date();d.setHours(0,0,0,0);while((d.getDay()+6)%7!==i)d.setDate(d.getDate()+1);return d}
+function buildICS(){const r=remGet(),p=S.prefs.plan,pi=planInfo(),ev=[],stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z',lead=r.lead==null?30:r.lead;
+  const add=(uid2,sum,desc,dt,end,rule)=>ev.push(['BEGIN:VEVENT','UID:'+uid2+'@iron-log','DTSTAMP:'+stamp,'DTSTART:'+dt,'DTEND:'+end,rule,'SUMMARY:'+icsEsc(sum),'DESCRIPTION:'+icsEsc(desc),'BEGIN:VALARM','TRIGGER:-PT'+lead+'M','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(sum),'END:VALARM','END:VEVENT'].filter(Boolean).join('\r\n'));
+  if(p&&pi&&!pi.done)p.days.forEach((ref,i)=>{if(!ref||!refName(ref)||(r.off||{})[i])return;const d=nextDow(i),t=hmin((r.times||[])[i]||'18:30'),dd=refDraft(ref),len=Math.max(30,Math.round(stats(dd).dur/60/15)*15);
+    add('s'+i+'-'+Date.now(),'Iron Log · '+refName(ref),'Séance prévue : '+refName(ref)+' ('+stats(dd).exos+' exercices).',icsDT(d,t),icsDT(d,t+len),'RRULE:FREQ=WEEKLY;COUNT='+Math.max(1,pi.weeks-pi.w))});
+  if(r.weigh){const d=nextDow(r.weighDay),t=hmin(r.weighTime);add('w-'+Date.now(),'Iron Log · pesée','Note ton poids et tes mensurations.',icsDT(d,t),icsDT(d,t+10),'RRULE:FREQ=WEEKLY')}
+  if(r.backup){const d=new Date();d.setMonth(d.getMonth()+1,1);d.setHours(9,0,0,0);add('b-'+Date.now(),'Iron Log · sauvegarde','Exporte tes données (Profil > Exporter une sauvegarde).',icsDT(d,540),icsDT(d,550),'RRULE:FREQ=MONTHLY')}
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Iron Log//FR','CALSCALE:GREGORIAN'].concat(ev,['END:VCALENDAR']).join('\r\n')}
+function remSheet(){const f=S.sheet.f,p=S.prefs.plan,opt=(a,c)=>a.map(([v,l])=>`<option value="${v}" ${String(c)===String(v)?'selected':''}>${l}</option>`).join(''),onoff=[['1','Activé'],['0','Coupé']],perm=!('Notification' in window)?'Non pris en charge ici':Notification.permission==='granted'?'Autorisées':Notification.permission==='denied'?'Refusées (à réactiver dans les réglages du navigateur)':'Pas encore autorisées';
+  return panel(`<div class="ptitle">Rappels</div><div class="pbody">
+   <label class="label">Rappels dans l'app</label><select class="field" data-ex="on" style="margin:6px 0 12px">${opt(onoff,f.on)}</select>
+   <div class="row" style="gap:10px"><label class="sp"><span class="label">Prévenir avant</span><select class="field" data-ex="lead" style="margin-top:6px">${opt([[0,'À l\'heure'],[15,'15 min'],[30,'30 min'],[60,'1 heure']],f.lead)}</select></label></div>
+   <div class="row" style="gap:10px;margin-top:12px"><label class="sp"><span class="label">Silence dès</span><input type="time" class="field" data-ex="qFrom" value="${f.qFrom}" style="margin-top:6px"></label><label class="sp"><span class="label">jusqu'à</span><input type="time" class="field" data-ex="qTo" value="${f.qTo}" style="margin-top:6px"></label></div>
+   <div class="sec-t label">Séances du programme</div>
+   ${p?p.days.map((ref,i)=>ref&&refName(ref)?`<div class="row" style="gap:8px;margin-top:8px"><span style="width:70px;font-size:13px">${WD[i]}</span><span class="sp small mute" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(refName(ref))}</span><input type="time" class="field" data-ex="t${i}" value="${f['t'+i]}" aria-label="Heure ${WD[i]}" style="width:120px"><select class="field" data-ex="o${i}" aria-label="Rappel ${WD[i]}" style="width:96px">${opt(onoff,f['o'+i])}</select></div>`:'').join(''):'<p class="mute small">Crée d\'abord un programme (onglet Aujourd\'hui) pour planifier des rappels.</p>'}
+   <div class="sec-t label">Pesée hebdomadaire</div><div class="row" style="gap:8px"><select class="field sp" data-ex="weigh">${opt(onoff,f.weigh)}</select><select class="field sp" data-ex="weighDay">${opt(WD.map((d,i)=>[i,d]),f.weighDay)}</select><input type="time" class="field" data-ex="weighTime" value="${f.weighTime}" style="width:120px"></div>
+   <div class="sec-t label">Sauvegarde mensuelle</div><select class="field" data-ex="backup">${opt(onoff,f.backup)}</select>
+   <div class="sec-t label">Notifications</div><p class="small mute" style="margin:0 0 8px">État : ${perm}. Elles ne partent que lorsque l'application est ouverte ou en arrière-plan. Pour des rappels fiables écran verrouillé, exporte le planning dans ton calendrier (.ics) : il enverra les alarmes lui-même.</p>
+   <div class="stack"><button class="btn ghost block" data-act="notif-ask">Autoriser les notifications</button><button class="btn ghost block" data-act="notif-test">Envoyer une notification test</button><button class="btn ghost block" data-act="ics-export">Exporter le planning (.ics)</button></div></div>
+   <div class="pfoot"><button class="btn primary block" data-act="rem-save">Enregistrer</button><button class="btn ghost block" data-act="sheet-close">Annuler</button></div>`,true)}
+function remForm(){const r=remGet(),f={on:r.on?'1':'0',lead:String(r.lead),qFrom:r.qFrom,qTo:r.qTo,weigh:r.weigh?'1':'0',weighDay:String(r.weighDay),weighTime:r.weighTime,backup:r.backup?'1':'0'};for(let i=0;i<7;i++){f['t'+i]=(r.times||[])[i]||'18:30';f['o'+i]=(r.off||{})[i]?'0':'1'}return f}
+
 function todayTab(){
   const last=S.sessions[0];
   return `<div class="page-head"><div class="label">${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</div><h1>Aujourd'hui</h1></div>
+  ${remBanners()}
   <p class="mute small" style="margin:0 0 12px">${PHRASES[(new Date().getDate()+new Date().getMonth())%PHRASES.length]}</p>
   ${planCardHTML()}
   <button class="btn ${S.prefs.plan?'ghost':'primary'} block" data-act="new-session" style="height:54px;font-size:16px;margin-top:12px">+ Nouvelle séance</button>
   ${S.templates.length?`<div class="sec"><span class="label">Mes séances</span><div class="stack">${S.templates.slice(0,4).map(tplCard).join('')}</div></div>`:`<div class="sec"><span class="label">Pour démarrer</span><div class="stack">${PRESETS.slice(0,2).map(p=>`<button class="card tplcard" data-act="preset" data-id="${p.id}"><div class="b" style="font-size:16px">${esc(p.name)}</div><div class="mute small">${esc(p.desc)}</div></button>`).join('')}</div></div>`}
   ${last?`<div class="sec"><span class="label">Dernière séance</span><button class="card tplcard" data-act="ses-open" data-id="${last.id}"><div class="b">${esc(last.name)}</div><div class="mute small">${fmtDate(last.startedAt)} · ${fmtDur((last.endedAt-last.startedAt)/1000)} · ${Math.round(last.entries.reduce((a,e)=>a+volume(e.sets),0)).toLocaleString('fr-FR')} kg</div></button></div>`:''}
-  <p class="mute small" style="margin-top:22px">Les rappels de séances et le coach arrivent à l'étape suivante.</p>`}
+`}
 function sessionsTab(){
   return `<div class="page-head row"><div class="sp"><div class="label">Programme</div><h1>Séances</h1></div><button class="btn primary" data-act="new-session">+ Nouvelle</button></div>
   <div class="sec" style="margin-top:6px"><span class="label">Mes séances</span>${S.templates.length?`<div class="stack">${S.templates.map(tplCard).join('')}</div>`:`<div class="card empty">Aucune séance enregistrée. Crée la tienne ou pars d'un modèle ci-dessous.</div>`}</div>
@@ -819,14 +984,15 @@ function profileTab(){
    <div class="small" style="margin-top:14px">Formule du 1RM estimé</div><div class="row" style="margin-top:6px;gap:8px">${[['epley','Epley'],['brzycki','Brzycki']].map(([v,l])=>`<button class="chip sp" style="text-align:center" data-act="formula" data-v="${v}" data-on="${(S.prefs.formula||'epley')===v}">${l}</button>`).join('')}</div>
    <div class="small" style="margin-top:14px">Barre</div><div class="row" style="margin-top:6px;gap:8px">${[10,15,20].map(v=>`<button class="chip sp" style="text-align:center" data-act="pl-bar" data-v="${v}" data-on="${(S.prefs.bar||20)===v}">${v} kg</button>`).join('')}</div>
    <div class="small" style="margin-top:14px">Disques disponibles (par côté)</div><div class="chips" style="margin-top:6px;flex-wrap:wrap;margin-right:0">${[25,20,15,10,5,2.5,1.25].map(v=>`<button class="chip" data-act="pl-toggle" data-v="${v}" data-on="${(S.prefs.plates||[]).includes(v)}">${fmtN(v)}</button>`).join('')}</div></div>
+  <div class="card" style="padding:16px;margin-top:12px"><span class="label">Rappels</span><p class="small" style="margin:8px 0 12px">${remGet().on?'Rappels activés : séances du programme, pesée, sauvegarde.':'Rappels de séances, pesée hebdomadaire et sauvegarde mensuelle, avec export dans ton calendrier.'}</p><button class="btn ghost block" data-act="rem-edit">Régler les rappels</button></div>
   <div class="card" style="padding:16px;margin-top:12px"><span class="label">Données</span><p class="small" style="margin:8px 0 12px">${st}</p>
    <div class="stack"><button class="btn ghost block" data-act="export">Exporter une sauvegarde</button><label class="btn ghost block" for="imp" style="cursor:pointer">Importer une sauvegarde</label><input id="imp" type="file" accept=".json,application/json" hidden></div></div>
   <div class="card" style="padding:16px;margin-top:12px"><span class="label">Données de démo</span><p class="small" style="margin:8px 0 12px">3 mois de séances fictives pour voir les courbes et la carte de régularité. Elles se retirent en un tap.</p>
    <div class="stack"><button class="btn ghost block" data-act="demo-load">Charger la démo</button>${S.sessions.some(x=>x.demo)?'<button class="btn danger block" data-act="demo-clear">Retirer les données de démo</button>':''}</div></div>
   <div class="card" style="padding:16px;margin-top:12px"><span class="label">Contenu</span><p class="small" style="margin:8px 0 0">${EXOS.length} exercices (dont ${(S.prefs.custom||[]).length} perso) · ${S.templates.length} séances · ${S.sessions.length} séances réalisées</p></div>
   <button class="btn danger block" data-act="reset-ask" style="margin-top:12px">Effacer mes données</button>`}
-function tabBody(){return({today:todayTab,sessions:sessionsTab,lib:libraryTab,prog:progressTab,profile:profileTab})[S.tab]()}
-function navHTML(){const T=[['today','Aujourd\'hui'],['sessions','Séances'],['lib','Exercices'],['prog','Progrès'],['profile','Profil']];
+function tabBody(){return({today:todayTab,sessions:sessionsTab,lib:libraryTab,prog:progressTab,coach:coachTab,profile:profileTab})[S.tab]()}
+function navHTML(){const T=[['today','Aujourd\'hui'],['sessions','Séances'],['lib','Exercices'],['prog','Progrès'],['coach','Coach'],['profile','Profil']];
   return `<nav class="nav" aria-label="Navigation principale">${T.map(([k,l])=>`<button data-act="tab" data-id="${k}" ${S.tab===k?'aria-current="page"':''}>${svg(k)}${l}</button>`).join('')}</nav>`}
 
 /* ───────── Éditeur de séance ───────── */
@@ -865,6 +1031,7 @@ function editorView(){
     <div class="edtitle"><div class="label g">Séance · ${run?'en cours':'pour plus tard'}</div><input id="ed-name" class="nameinput" value="${esc(d.name)}" aria-label="Nom de la séance" maxlength="60"></div>
     <button id="undo" class="iconbtn" data-act="undo" aria-label="Annuler" ${e.undo.length?'':'disabled'}>${svg('undo',20)}</button>
     <button id="redo" class="iconbtn" data-act="redo" aria-label="Rétablir" ${e.redo.length?'':'disabled'}>${svg('redo',20)}</button>
+    ${run?`<button class="iconbtn" data-act="coach-run" aria-label="Coach">${svg('coach',20)}</button>`:''}
     <button class="iconbtn" data-act="ed-menu" aria-label="Options de la séance">⋯</button></header>
    <section class="card stats"><div class="grid"><div class="stat"><span class="label">Exos</span><b id="st-exos">${st.exos}</b></div><div class="stat"><span class="label">Séries</span><b id="st-sets">${st.sets}</b></div>
     <div class="stat"><span class="label">${run?'Chrono':'Durée'}</span><b id="st-dur">${run?fmtClock((Date.now()-e.startedAt)/1000):'~'+fmtDur(st.dur)}</b></div></div>
@@ -881,7 +1048,7 @@ function buzz(p){try{if(navigator.vibrate)navigator.vibrate(p)}catch(x){}}
 function startRest(sec){const e=E();if(!e||e.mode!=='run'||!(sec>0))return;e.timer={end:Date.now()+sec*1000,total:sec};saveRun();
   try{if(S.prefs.sound){const A=window.AudioContext||window.webkitAudioContext;if(A){actx=actx||new A();if(actx.state==='suspended')actx.resume()}}}catch(x){}}
 function tickRest(){const e=E();if(!e||!e.timer)return;const l=restLeft(),t=$('#rt-t'),p=$('#rt-p');
-  if(l<=0){e.timer=null;saveRun();const b=$('#rtbar');if(b)b.remove();beep();buzz([200,100,200,100,300]);toast('Repos terminé, c\'est reparti');return}
+  if(l<=0){e.timer=null;saveRun();const b=$('#rtbar');if(b)b.remove();beep();buzz([200,100,200,100,300]);toast('Repos terminé, c\'est reparti');if(document.hidden)notify('Repos terminé','Prochaine série, c\'est reparti.','repos');return}
   if(t)t.textContent=fmtClock(l);if(p)p.style.width=Math.max(0,Math.min(100,l/e.timer.total*100))+'%'}
 function updateStats(){const e=E();if(!e)return;const st=stats(e.draft);const a=$('#st-exos'),b=$('#st-sets'),c=$('#st-dur');if(a)a.textContent=st.exos;if(b)b.textContent=st.sets;if(c&&e.mode!=='run')c.textContent='~'+fmtDur(st.dur)}
 
@@ -1026,6 +1193,9 @@ function sheetHTML(){
   case 'goal': return goalSheet();
   case 'body': return bodySheet();
   case 'cmp': return cmpSheet();
+  case 'gen': return genSheet();
+  case 'rem': return remSheet();
+  case 'coachrun': return coachRunSheet();
   case 'exmenu': return panel(`<div class="ptitle">${esc(EXMAP[it.exId].n)}</div><div class="pbody">${optBtn('em-info','Voir la fiche')}${optBtn('em-plates','Calculateur de disques')}${optBtn('em-replace','Remplacer par un autre exercice')}${optBtn('em-ss',(it.ss&&e.draft.items[sh.i+1]&&e.draft.items[sh.i+1].ss===it.ss)?'Retirer le superset avec le suivant':'Superset avec l\'exercice suivant')}${optBtn('em-dup','Dupliquer')}${optBtn('em-del','Supprimer de la séance','','danger')}</div>`);
   case 'cycle': return panel(`<div class="ptitle">Enregistrer dans un cycle</div><div class="pbody">${['Cycle 1','Cycle 2','Cycle 3',''].map(c=>optBtn('cycle-set',c||'Aucun cycle',`data-v="${esc(c)}" data-on="${e.draft.cycle===c}"`)).join('')}<p class="mute small">Les cycles et la semaine de décharge arrivent à l'étape E.</p></div>`);
   case 'edmenu': return panel(`<div class="ptitle">Séance</div><div class="pbody">${optBtn('save-tpl','Enregistrer')}${S.templates.some(t=>t.id===e.draft.id)?optBtn('tpl-del-ed','Supprimer cette séance','','danger'):''}</div>`);
@@ -1251,6 +1421,36 @@ const A={
   'cal-nav'(el){calOff=Math.min(0,calOff+(+el.dataset.d));render()},
   'cal-day'(el){$$('.cd.sel').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');const i=$('#cal-info');if(!i)return;const n=+el.dataset.n,d=new Date(el.dataset.k+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
     i.textContent=n?`${d} : ${el.dataset.t}, ${n} séries`:`${d} : repos`},
+  'adv-ok'(el){const a=coachAdvice().find(x=>x.key===el.dataset.k);if(a){logAdvice(a,'applied');render()}},
+  'adv-no'(el){const a=coachAdvice().find(x=>x.key===el.dataset.k);if(a){logAdvice(a,'ignored');render()}},
+  'adv-apply'(el){const a=coachAdvice().find(x=>x.key===el.dataset.k);if(!a)return;if(a.apply==='deload')S.prefs.deloadUntil=monday(Date.now())+7*DAYMS;logAdvice(a,'applied');render();toast('Décharge activée jusqu\'à lundi')},
+  'gen-open'(){openSheet({k:'gen',f:{min:'45',focus:'auto',eq:'all'}})},
+  'gen-go'(){const f=S.sheet.f,d=genSession(+f.min,f.focus,f.eq);if(!d.items.length){toast('Aucun exercice trouvé avec ces critères');return}closeSheet();openEditor(d);toast('Séance générée : ajuste-la puis démarre')},
+  'ai-key-save'(){const v=($('#ai-key')||{}).value||'';if(v.trim().length<20){toast('Clé invalide');return}try{localStorage.setItem('il-key',v.trim())}catch(e){toast('Impossible d\'enregistrer');return}render();toast('Clé enregistrée sur cet appareil')},
+  'ai-key-del'(){try{localStorage.removeItem('il-key')}catch(e){}render();toast('Clé retirée')},
+  'chat-send'(){aiSend(($('#chat-in')||{}).value)},
+  'chat-quick'(el){aiSend(QUICK[+el.dataset.i][1])},
+  'chat-clear'(){S.chat=[];chatSave();render()},
+  'ai-import'(el){const m=chatLoad()[+el.dataset.i],ses=m&&aiSession(m.t);if(!ses)return;
+    const d={id:uid(),name:ses.name,cycle:'Cycle 1',items:ses.items.map(x=>{const it=makeItem(x.exId,x.sets,x.reps||undefined);if(x.rest!=null)it.rest=x.rest;return it}),updated:Date.now()};
+    logAdvice({key:'ia:'+uid(),title:'Séance du coach importée : '+ses.name},'applied');openEditor(d);toast('Séance importée : ajuste-la puis démarre')},
+  'coach-run'(){openSheet({k:'coachrun'})},
+  async 'cr-ask'(){const sh=S.sheet;if(!sh||sh.busy||!(sh.q||'').trim())return;sh.busy=true;sh.ans='';renderOv();
+    const e=E(),extra='\nSéance en cours : '+JSON.stringify(e.draft.items.map(it=>({exo:EXMAP[it.exId].n,series:it.sets.map(x=>(x.kg||0)+'x'+(x.reps||0)+(x.done?' fait':''))})));
+    try{sh.ans=await aiCall([{r:'u',t:sh.q}],extra);sh.err=false}catch(er){sh.ans='⚠ '+er.message;sh.err=true}
+    sh.busy=false;if(S.sheet===sh)renderOv()},
+  'rem-edit'(){openSheet({k:'rem',f:remForm()})},
+  'rem-save'(){const f=S.sheet.f,r=remGet(),times=[],off={};for(let i=0;i<7;i++){times.push(f['t'+i]||'18:30');if(f['o'+i]==='0')off[i]=1}
+    S.prefs.rem=Object.assign(r,{on:f.on==='1',lead:+f.lead,qFrom:f.qFrom,qTo:f.qTo,times,off,weigh:f.weigh==='1',weighDay:+f.weighDay,weighTime:f.weighTime,backup:f.backup==='1'});persist('prefs');closeSheet();render();toast('Rappels enregistrés');checkReminders()},
+  'notif-ask'(){if(!('Notification' in window)){toast('Notifications non prises en charge ici');return}Notification.requestPermission().then(()=>{if(S.sheet&&S.sheet.k==='rem')renderOv();toast(Notification.permission==='granted'?'Notifications autorisées':'Notifications non autorisées')})},
+  'notif-test'(){if(!notify('Iron Log','Notification de test : tout fonctionne.','test'))toast('Autorise d\'abord les notifications')},
+  'ics-export'(){const p=S.prefs.plan;if(!p&&!remGet().weigh&&!remGet().backup){toast('Rien à exporter');return}const data=buildICS(),name='iron-log-rappels.ics';
+    if(window.claude&&claude.use){claude.use('downloads').then(d=>{if(!d){toast('Export indisponible ici');return}return d.save({filename:name,data}).then(()=>toast('Planning exporté')).catch(()=>toast('Export impossible'))}).catch(()=>toast('Export impossible'));return}
+    try{const u=URL.createObjectURL(new Blob([data],{type:'text/calendar'})),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('Planning exporté : ouvre le fichier pour l\'ajouter au calendrier')}catch(e){toast('Export impossible')}},
+  'rem-move'(){const p=S.prefs.plan,yk=dayKey(Date.now()-DAYMS),yi=(todayIdx()+6)%7,ref=p.over&&yk in p.over?p.over[yk]:p.days[yi];p.over=p.over||{};p.seen=p.seen||{};p.over[dayKey(Date.now())]=ref;p.seen[yk]=1;persist('prefs');render();toast('Séance décalée à aujourd\'hui')},
+  'rem-skip'(){const p=S.prefs.plan;p.seen=p.seen||{};p.seen[dayKey(Date.now()-DAYMS)]=1;persist('prefs');render()},
+  'rem-rest'(){const p=S.prefs.plan;p.seen=p.seen||{};p.over=p.over||{};p.seen[dayKey(Date.now()-DAYMS)]=1;p.over[dayKey(Date.now())]='';persist('prefs');render();toast('Aujourd\'hui : repos')},
+  'rem-hide'(el){let h={};try{h=JSON.parse(localStorage.getItem('il-hide')||'{}')}catch(e){}h[el.dataset.k+dayKey(Date.now())]=1;try{localStorage.setItem('il-hide',JSON.stringify(h))}catch(e){}render()},
   'hist-more'(){histMax+=15;const l=$('#h-list');if(l)l.innerHTML=histListHTML()},
   'hm-range'(){hmYear=!hmYear;render()},
   formula(el){S.prefs.formula=el.dataset.v;persist('prefs');buildPrev();render()},
@@ -1281,7 +1481,7 @@ const A={
     s[f]=v;const inp=st.parentElement.querySelector('.setrow .num[data-f="'+f+'"]');if(inp)inp.value=f==='kg'?fmtN(v):String(v);
     dirty();updateStats()},
   'step-size'(el){S.step=STEPS[(STEPS.indexOf(S.step)+1)%STEPS.length];try{localStorage.setItem('il-step',String(S.step))}catch(e){}el.textContent='± '+fmtN(S.step)+' kg'},
-  export(){const data=JSON.stringify({app:'iron-log',version:1,exportedAt:new Date().toISOString(),prefs:S.prefs,templates:S.templates,sessions:S.sessions},null,1),name='iron-log-sauvegarde.json';
+  export(){try{localStorage.setItem('il-lastbackup',String(Date.now()))}catch(e){}const data=JSON.stringify({app:'iron-log',version:1,exportedAt:new Date().toISOString(),prefs:S.prefs,templates:S.templates,sessions:S.sessions},null,1),name='iron-log-sauvegarde.json';
     if(window.claude&&claude.use){claude.use('downloads').then(d=>{if(!d){toast('Export indisponible ici');return}return d.save({filename:name,data}).then(()=>toast('Sauvegarde exportée')).catch(err=>{if(!err||err.code!=='declined')toast('Export impossible')})}).catch(()=>toast('Export impossible'));return}
     try{const u=URL.createObjectURL(new Blob([data],{type:'application/json'})),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000);toast('Sauvegarde exportée')}catch(e){toast('Export impossible')}},
   'reset-ask'(){openSheet({k:'confirm',title:'Effacer toutes tes données ?',msg:'Séances, historique, favoris, notes et exercices perso seront supprimés. Cette action est définitive.',yes:'reset',label:'Tout effacer'})},
@@ -1297,6 +1497,7 @@ document.addEventListener('click',ev=>{const el=ev.target.closest('[data-act]');
 document.addEventListener('mouseover',ev=>{const h=ev.target.closest&&ev.target.closest('.hit');if(h&&S.sheet&&S.sheet.k==='prog')A.pt(h)});
 document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&S.sheet){if(S.sheet.back){openSheet(S.sheet.back)}else closeSheet()}});
 document.addEventListener('change',ev=>{const t=ev.target;
+  if(t.id==='ai-model'){S.prefs.aiModel=t.value.trim()||'claude-sonnet-5-5';persist('prefs');return}
   if(t.dataset.pc&&S.sheet){S.sheet[t.dataset.pc]=+t.value;renderOv();return}
   if(t.dataset.fs&&S.sheet&&S.sheet.ses){persist('ses',S.sheet.ses);return}
   if(t.dataset.sel){S[t.dataset.sel]=t.dataset.sel==='minStars'?+t.value:t.value;render();return}
@@ -1315,6 +1516,8 @@ document.addEventListener('input',ev=>{const t=ev.target;
   if(t.dataset.ex&&S.sheet&&S.sheet.f){S.sheet.f[t.dataset.ex]=t.value;if((t.dataset.ex==='kind'&&S.sheet.k==='goal')||S.sheet.k==='cmp')renderOv();return}
   if(t.id==='ed-name'){if(!t._p){push();t._p=true}E().draft.name=t.value;dirty();return}
   if(t.id==='lib-q'){S.q=t.value;renderLibList();return}
+  if(t.id==='chat-in'){chatDraft=t.value;return}
+  if(t.dataset.cr&&S.sheet){S.sheet.q=t.value;return}
   if(t.id==='h-q'){histQ=t.value;histMax=15;const l=$('#h-list');if(l)l.innerHTML=histListHTML();return}
   if(t.dataset.se&&S.sheet&&S.sheet.d){const k=t.dataset.se,d=S.sheet.d;if(k==='name'||k==='note')d[k]=t.value;else{const [i,j,f]=k.split(':'),x=d.entries[+i].sets[+j],v=num(t.value);x[f]=v>0?v:(f==='kg'&&t.value.trim()!==''&&v===0?0:null)}return}
   if(t.dataset.fs&&S.sheet&&S.sheet.ses){S.sheet.ses[t.dataset.fs]=t.value||null;if(t.tagName==='SELECT')persist('ses',S.sheet.ses);return}
@@ -1363,6 +1566,7 @@ document.addEventListener('pointerdown',ev=>{
 loadLocal();render();initCloud();
 
 /* Installation hors-ligne */
+setInterval(checkReminders,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkReminders()});checkReminders();
 try{if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)){navigator.serviceWorker.register('sw.js').catch(()=>{})}
   if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{})}catch(e){}
 document.addEventListener('visibilitychange',()=>{const e=E();if(document.visibilityState==='visible'&&e&&e.mode==='run'){try{if(navigator.wakeLock&&navigator.wakeLock.request)navigator.wakeLock.request('screen').then(l=>{wl=l}).catch(()=>{});tickRest()}catch(x){}}});
