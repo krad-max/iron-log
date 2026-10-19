@@ -270,6 +270,11 @@ select.sel{background:var(--card);border:1px solid var(--line);border-radius:10p
 .mchips span{font-size:12px;padding:3px 9px;border-radius:99px;background:var(--soft);color:var(--ink);border:1px solid var(--accent)}
 .shimg{width:100%;border-radius:14px;display:block;border:1px solid var(--line)}
 .inj{padding:12px 0;border-bottom:1px solid var(--line)}
+.dg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.dg.one{grid-template-columns:minmax(0,260px);justify-content:center}
+.dg figure{margin:0;text-align:center}
+.dg svg{width:100%;height:auto;display:block;color:var(--ink);background:var(--field);border-radius:12px}
+.dg figcaption{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-top:4px}
 .legend{display:flex;gap:14px;font-size:12px;color:var(--mute);padding:2px 6px}
 .legend span::before{content:"";display:inline-block;width:14px;height:0;border-top:2px solid var(--accent);vertical-align:middle;margin-right:6px}
 .legend.lg span::before{width:12px;height:12px;border:0;border-radius:3px;background:var(--field)}
@@ -1135,6 +1140,109 @@ function showStepper(inp){
 /* ───────── Feuilles ───────── */
 const panel=(inner,tall)=>`<div class="ov"><button class="bd" data-act="sheet-close" aria-label="Fermer"></button><div class="panel ${tall?'tall':''}" role="dialog" aria-modal="true"><div class="grab"></div>${inner}</div></div>`;
 const optBtn=(act,label,attrs='',cls='')=>`<button class="opt ${cls}" data-act="${act}" ${attrs}>${label}</button>`;
+/* ───────── Schémas de mouvement (bonhomme articulé, vue de profil) ───────── */
+const DGL={T:34,UA:19,FA:17,TH:26,SH:24},DGR=Math.PI/180;
+const dgv=(a,l)=>[Math.sin(a*DGR)*l,Math.cos(a*DGR)*l],dgp=(p,v)=>[p[0]+v[0],p[1]+v[1]];
+function dgik(p,t,l1,l2,dir){const dx=t[0]-p[0],dy=t[1]-p[1],d=Math.hypot(dx,dy)||1,dd=Math.min(d,l1+l2-0.01),a=(l1*l1-l2*l2+dd*dd)/(2*dd),h=Math.sqrt(Math.max(0,l1*l1-a*a)),ux=dx/d,uy=dy/d,bx=p[0]+ux*a,by=p[1]+uy*a;return[[bx-uy*h*dir,by+ux*h*dir],[p[0]+ux*dd,p[1]+uy*dd]]}
+function dgsolve(q){
+  const L=DGL,sh=q.sh,hip=q.hip||dgp(sh,dgv(q.t+180,L.T));let el,hd,kn,an,kn2,an2;
+  if(q.arm){el=dgp(sh,dgv(q.arm[0],L.UA));hd=dgp(el,dgv(q.arm[1],L.FA))}else[el,hd]=dgik(sh,q.hand,L.UA,L.FA,q.ed||1);
+  if(q.leg){kn=dgp(hip,dgv(q.leg[0],L.TH));an=dgp(kn,dgv(q.leg[1],L.SH))}else[kn,an]=dgik(hip,q.foot,L.TH,L.SH,q.kd||1);
+  if(q.leg2){kn2=dgp(hip,dgv(q.leg2[0],L.TH));an2=dgp(kn2,dgv(q.leg2[1],L.SH))}else if(q.foot2)[kn2,an2]=dgik(hip,q.foot2,L.TH,L.SH,q.kd2||q.kd||1);
+  const toe=q.toe||[an[0]+8,Math.min(an[1]+2,110)],toe2=an2?[an2[0]+8,Math.min(an2[1]+2,110)]:null;
+  return{sh,hip,el,hd,kn,an,kn2,an2,toe,toe2,pl:q.pl,head:dgp(sh,dgv(q.t,13))}}
+function dgbody(s,o){const f=n=>n.toFixed(1),P=(a,b)=>`<line x1="${f(a[0])}" y1="${f(a[1])}" x2="${f(b[0])}" y2="${f(b[1])}"/>`;
+  let h=`<g stroke="currentColor" stroke-width="3.4" stroke-linecap="round" fill="none" opacity="${o}">`;
+  if(s.an2)h+=`<g opacity=".55">${P(s.hip,s.kn2)}${P(s.kn2,s.an2)}${P(s.an2,s.toe2)}</g>`;
+  h+=P(s.hip,s.sh)+P(s.hip,s.kn)+P(s.kn,s.an)+P(s.an,s.toe)+P(s.sh,s.el)+P(s.el,s.hd);
+  h+=`<circle cx="${f(s.head[0])}" cy="${f(s.head[1])}" r="7" fill="var(--card)"/></g>`;return h}
+function dgprop(eq,s,T,o){const f=n=>n.toFixed(1),[x,y]=s.hd,c='var(--accent)';
+  if(eq==='barre')return`<circle cx="${f(x)}" cy="${f(y)}" r="9" fill="${c}" fill-opacity=".28" stroke="${c}" stroke-width="2.6" opacity="${o}"/>`;
+  if(eq==='haltères')return`<rect x="${f(x-8)}" y="${f(y-3.5)}" width="16" height="7" rx="2" fill="${c}" opacity="${o}"/>`;
+  if(eq==='kettlebell')return`<circle cx="${f(x)}" cy="${f(y+8)}" r="7" fill="${c}" opacity="${o}"/><path d="M${f(x-4)} ${f(y+3)}Q${f(x)} ${f(y-3)} ${f(x+4)} ${f(y+3)}" stroke="${c}" stroke-width="2" fill="none" opacity="${o}"/>`;
+  if((eq==='poulie'||eq==='élastiques')&&T.anchor)return`<line x1="${f(x)}" y1="${f(y)}" x2="${T.anchor[0]}" y2="${T.anchor[1]}" stroke="${c}" stroke-width="1.8" ${eq==='élastiques'?'stroke-dasharray="4 3"':''} opacity="${o}"/><circle cx="${T.anchor[0]}" cy="${T.anchor[1]}" r="3" fill="${c}" opacity="${o}"/>`;
+  if(eq==='machine')return`<circle cx="${f(x)}" cy="${f(y)}" r="4" fill="${c}" opacity="${o}"/>`;
+  return''}
+function dgframe(T,eq,which){
+  const a=dgsolve(T.A),b=dgsolve(T.B||T.A),cur=which==='A'?a:b,oth=which==='A'?b:a,f=n=>n.toFixed(1);
+  let h=`<line x1="4" y1="110" x2="156" y2="110" stroke="var(--line)" stroke-width="2"/>`;
+  (T.bench||[]).forEach(l=>{h+=`<line x1="${l[0]}" y1="${l[1]}" x2="${l[2]}" y2="${l[3]}" stroke="var(--mute)" stroke-opacity=".45" stroke-width="${l[4]||5}" stroke-linecap="round"/>`});
+  if(T.bar)h+=`<line x1="${T.bar[0]}" y1="${T.bar[1]}" x2="${T.bar[2]}" y2="${T.bar[3]}" stroke="var(--mute)" stroke-opacity=".6" stroke-width="3" stroke-linecap="round"/>`;
+  if(cur.pl)h+=`<line x1="${cur.pl[0]}" y1="${cur.pl[1]}" x2="${cur.pl[2]}" y2="${cur.pl[3]}" stroke="var(--mute)" stroke-opacity=".6" stroke-width="5" stroke-linecap="round"/>`;
+  if(!T.static)h+=dgbody(oth,.2)+dgprop(eq,oth,T,.2);
+  h+=dgbody(cur,1)+dgprop(eq,cur,T,1);
+  if(!T.static){const A=which==='A'?a.hd:b.hd,B=which==='A'?b.hd:a.hd,dx=B[0]-A[0],dy=B[1]-A[1],d=Math.hypot(dx,dy);
+    if(d>8){const ux=dx/d,uy=dy/d,ex=B[0],ey=B[1];h+=`<line x1="${f(A[0])}" y1="${f(A[1])}" x2="${f(ex-ux*4)}" y2="${f(ey-uy*4)}" stroke="var(--accent)" stroke-width="1.6" stroke-dasharray="3 3"/><polygon points="${f(ex)},${f(ey)} ${f(ex-ux*7-uy*3.5)},${f(ey-uy*7+ux*3.5)} ${f(ex-ux*7+uy*3.5)},${f(ey-uy*7-ux*3.5)}" fill="var(--accent)"/>`}}
+  return`<svg viewBox="0 -44 160 160" role="img" aria-label="${which==='A'?'Position de départ':'Position de fin'}">${h}</svg>`}
+
+const TPL={
+ press:{n:'Développé au-dessus de la tête',
+  A:{sh:[80,24],t:180,hand:[88,24],ed:1,foot:[80,107]},B:{sh:[80,24],t:180,hand:[82,-12],ed:1,foot:[80,107]}},
+ curl:{n:'Flexion du coude',anchor:[100,108],
+  A:{sh:[80,24],t:180,arm:[0,0],foot:[80,107]},B:{sh:[80,24],t:180,arm:[0,140],foot:[80,107]}},
+ ext:{n:'Extension du coude',anchor:[88,-24],
+  A:{sh:[80,24],t:180,arm:[0,120],foot:[80,107]},B:{sh:[80,24],t:180,arm:[0,0],foot:[80,107]}},
+ raise:{n:'Élévation du bras',anchor:[100,108],
+  A:{sh:[80,24],t:180,arm:[0,0],foot:[80,107]},B:{sh:[80,24],t:180,arm:[90,90],foot:[80,107]}},
+ shrug:{n:'Haussement d\'épaules',
+  A:{sh:[80,26],t:180,hip:[80,58],arm:[0,0],foot:[80,107]},B:{sh:[80,19],t:180,hip:[80,58],arm:[0,0],foot:[80,107]}},
+ row:{n:'Tirage buste penché',
+  A:{sh:[90,38],t:135,hand:[90,76],ed:-1,foot:[64,107],kd:1},B:{sh:[90,38],t:135,hand:[78,62],ed:-1,foot:[64,107],kd:1}},
+ deadlift:{n:'Soulevé de terre',
+  A:{sh:[92,62],t:125,hand:[92,98],ed:1,foot:[70,107],kd:1},B:{sh:[72,24],t:180,hand:[78,60],ed:1,foot:[70,107]}},
+ hinge:{n:'Charnière de hanche',
+  A:{sh:[80,24],t:180,hand:[82,60],ed:1,foot:[76,107]},B:{sh:[96,56],t:95,hand:[98,90],ed:1,foot:[66,107],kd:1}},
+ squat:{n:'Squat',
+  A:{sh:[80,24],t:180,hand:[84,28],ed:-1,foot:[80,107]},B:{sh:[74,52],t:150,hand:[82,56],ed:-1,foot:[76,107],kd:1}},
+ lunge:{n:'Fente',
+  A:{sh:[80,24],t:180,hand:[82,60],ed:1,foot:[92,107],foot2:[66,107],kd:1},B:{sh:[82,44],t:180,hand:[84,78],ed:1,foot:[104,107],foot2:[52,105],kd:1,kd2:1}},
+ legpress:{n:'Presse à cuisses',bench:[[50,88,22,64,5]],
+  A:{sh:[22,66],t:235,hip:[50,86],hand:[52,80],ed:1,leg:[150,60],pl:[82,82,92,64]},B:{sh:[22,66],t:235,hip:[50,86],hand:[52,80],ed:1,leg:[125,125],pl:[94,66,104,42]}},
+ legext:{n:'Extension des jambes',bench:[[60,88,60,52,5],[44,84,92,84,5]],
+  A:{sh:[56,48],t:190,hip:[62,82],hand:[70,76],ed:1,leg:[90,0]},B:{sh:[56,48],t:190,hip:[62,82],hand:[70,76],ed:1,leg:[90,85]}},
+ legcurl:{n:'Flexion des jambes',bench:[[20,86,126,86,5]],
+  A:{sh:[96,78],t:90,hip:[62,78],hand:[104,92],ed:1,leg:[-90,-90],toe:[4,80]},B:{sh:[96,78],t:90,hip:[62,78],hand:[104,92],ed:1,leg:[-90,180],toe:[38,52]}},
+ bridge:{n:'Pont / hip thrust',bench:[[10,98,48,98,6]],
+  A:{sh:[30,94],t:270,hip:[64,96],hand:[66,94],ed:1,foot:[92,107],kd:1},B:{sh:[30,94],t:270,hip:[64,76],hand:[66,74],ed:1,foot:[92,107],kd:1}},
+ calf:{n:'Montée sur la pointe des pieds',
+  A:{sh:[80,24],t:180,arm:[0,0],foot:[80,105],toe:[89,108]},B:{sh:[80,17],t:180,arm:[0,0],foot:[80,97],toe:[89,108]}},
+ kick:{n:'Extension de hanche',anchor:[40,102],
+  A:{sh:[88,32],t:155,hand:[110,56],ed:1,foot:[78,107]},B:{sh:[88,32],t:155,hand:[110,56],ed:1,leg:[-105,-100],kd:1}},
+ plank:{n:'Gainage',static:true,
+  A:{sh:[100,76],t:96,arm:[0,90],foot:[22,106]}},
+ crunch:{n:'Flexion du tronc',
+  A:{sh:[66,98],t:270,hip:[100,98],hand:[60,92],ed:1,foot:[122,107],kd:-1},B:{sh:[72,84],t:245,hip:[100,98],hand:[64,76],ed:1,foot:[122,107],kd:-1}},
+ hang:{n:'Relevé de jambes suspendu',bar:[64,-28,126,-28],
+  A:{sh:[82,8],t:180,hip:[82,42],hand:[96,-28],ed:1,leg:[0,0]},B:{sh:[82,8],t:180,hip:[82,42],hand:[96,-28],ed:1,leg:[90,90]}},
+ pullup:{n:'Traction',bar:[64,-28,126,-28],
+  A:{sh:[82,8],t:180,hip:[82,42],hand:[96,-28],ed:1,leg:[0,-20]},B:{sh:[84,-20],t:180,hip:[84,14],hand:[98,-28],ed:-1,leg:[0,-20]}},
+ pulldown:{n:'Tirage vertical',anchor:[96,-30],bench:[[56,92,56,70,5],[40,92,74,92,5]],
+  A:{sh:[58,50],t:185,hip:[58,84],hand:[84,6],ed:1,leg:[90,10]},B:{sh:[58,50],t:185,hip:[58,84],hand:[80,40],ed:-1,leg:[90,10]}},
+ seatedrow:{n:'Tirage horizontal',anchor:[154,74],bench:[[40,92,80,92,5]],
+  A:{sh:[72,50],t:165,hip:[56,86],hand:[106,66],ed:1,leg:[80,75]},B:{sh:[58,50],t:182,hip:[56,86],hand:[70,76],ed:-1,leg:[80,75]}},
+ dip:{n:'Dips',bar:[66,60,100,60],
+  A:{sh:[80,22],t:178,hip:[82,56],hand:[82,60],ed:-1,leg:[10,-35]},B:{sh:[80,40],t:170,hip:[82,70],hand:[82,60],ed:-1,leg:[10,-35]}},
+ fly:{n:'Écartés',bench:[[40,80,125,80,5]],
+  A:{sh:[62,72],t:270,hip:[96,72],arm:[180,180],foot:[112,107],kd:1},B:{sh:[62,72],t:270,hip:[96,72],arm:[205,215],foot:[112,107],kd:1}},
+ bench:{n:'Développé couché',bench:[[40,80,125,80,5]],
+  A:{sh:[62,72],t:270,hip:[96,72],hand:[62,36],ed:1,foot:[112,107],kd:1},B:{sh:[62,72],t:270,hip:[96,72],hand:[64,62],ed:1,foot:[112,107],kd:1}},
+ incline:{n:'Développé incliné',bench:[[98,86,66,54,5],[100,86,116,86,5]],
+  A:{sh:[72,56],t:225,hip:[96,80],hand:[84,22],ed:1,foot:[116,107],kd:1},B:{sh:[72,56],t:225,hip:[96,80],hand:[78,46],ed:1,foot:[116,107],kd:1}},
+ pushup:{n:'Pompe',
+  A:{sh:[104,68],t:100,hand:[104,106],ed:-1,foot:[26,106]},B:{sh:[104,88],t:92,hand:[104,106],ed:-1,foot:[26,106]}},
+ facepull:{n:'Tirage au visage',anchor:[152,24],
+  A:{sh:[80,24],t:180,hand:[116,26],ed:-1,foot:[80,107]},B:{sh:[80,24],t:180,hand:[92,22],ed:-1,foot:[80,107]}},
+ skull:{n:'Extension allongé',bench:[[40,80,125,80,5]],
+  A:{sh:[62,72],t:270,hip:[96,72],arm:[180,180],foot:[112,107],kd:1},B:{sh:[62,72],t:270,hip:[96,72],arm:[180,-40],foot:[112,107],kd:1}},
+ carry:{n:'Marche chargée',
+  A:{sh:[80,24],t:180,arm:[0,0],foot:[92,107],foot2:[68,107]},B:{sh:[80,24],t:180,arm:[0,0],foot:[68,107],foot2:[92,107]}},
+};
+
+const EX_TPL={"dev-couche-barre":"bench","dev-incline-halteres":"incline","dev-decline-machine":"bench","pompes":"pushup","ecartes-poulie":"fly","pec-deck":"fly","dips-pecs":"dip","tractions-pronation":"pullup","tirage-vertical":"pulldown","rowing-barre":"row","rowing-halt-un-bras":"row","rowing-machine":"seatedrow","tirage-horizontal":"seatedrow","souleve-de-terre":"deadlift","hyperextension":"hinge","dev-militaire":"press","dev-epaules-halteres":"press","elevations-laterales":"raise","elevations-laterales-poulie":"raise","oiseau-halteres":"row","face-pull":"facepull","shrugs-halteres":"shrug","curl-barre-ez":"curl","curl-halteres-incline":"curl","curl-marteau":"curl","extension-poulie-corde":"ext","barre-au-front":"skull","extension-nuque-poulie":"ext","squat-barre":"squat","presse-cuisses":"legpress","fentes-bulgares":"lunge","leg-extension":"legext","leg-curl-allonge":"legcurl","souleve-de-terre-roumain":"hinge","hip-thrust":"bridge","mollets-debout-machine":"calf","adducteurs-machine":"kick","planche":"plank","crunch-poulie":"crunch","releve-jambes-suspendu":"hang","curl-poignets":"curl","dev-couche-halteres":"bench","dev-couche-prise-neutre":"bench","dev-incline-barre":"incline","dev-convergent-machine":"bench","ecartes-halteres":"fly","pompes-lestees":"pushup","pompes-elastique":"pushup","ecartes-poulie-haut-bas":"fly","tractions-supination":"pullup","tractions-neutres":"pullup","pull-over-poulie":"pulldown","tirage-prise-neutre":"pulldown","rowing-t-bar":"row","rowing-poitrine-appuyee":"row","rowing-kettlebell":"row","rowing-elastique":"seatedrow","rowing-inverse":"row","bonjour-barre":"hinge","superman":"hinge","dev-arnold":"press","dev-militaire-barre-assis":"press","dev-kettlebell-debout":"press","elevations-frontales":"raise","elevations-laterales-elastique":"raise","oiseau-poulie":"facepull","rotation-externe-elastique":"facepull","shrugs-barre":"shrug","shrugs-kettlebell":"shrug","renforcement-cou-elastique":"shrug","curl-pupitre":"curl","curl-poulie-basse":"curl","curl-kettlebell-marteau":"curl","curl-elastique":"curl","dips-banc":"dip","extension-nuque-halteres":"ext","kickback-poulie":"ext","pompes-diamant":"pushup","extension-elastique":"ext","curl-poignets-inverse":"curl","marche-fermier":"carry","front-squat":"squat","goblet-squat-kettlebell":"squat","hack-squat-machine":"squat","fentes-marchees-halteres":"lunge","step-up-halteres":"lunge","sissy-squat":"squat","squat-elastique":"squat","wall-sit":"squat","leg-curl-assis-machine":"legcurl","nordic-curl":"legcurl","souleve-roumain-unijambiste-kb":"hinge","leg-curl-elastique":"legcurl","curl-ischios-serviette":"legcurl","kettlebell-swing":"hinge","pont-fessier-unijambiste":"bridge","hip-thrust-machine":"bridge","pont-fessier-elastique":"bridge","squat-sumo-kettlebell":"squat","souleve-de-terre-sumo":"deadlift","mollets-assis-machine":"calf","mollets-unijambiste-haltere":"calf","mollets-presse":"legpress","abducteurs-machine":"kick","marche-laterale-elastique":"kick","adducteurs-poulie":"kick","roulette-abdos":"plank","pallof-press":"facepull","crunch-inverse":"crunch","planche-laterale":"plank","dead-bug":"plank","woodchop-poulie":"crunch","russian-twist-kettlebell":"crunch","crunch-machine":"crunch","extension-lombaires-machine":"hinge","etirement-flechisseurs-hanche":"lunge","etirement-ischios":"hinge","etirement-pigeon":"bridge","x-pompes-genoux":"pushup","x-pompes-pieds-surleves":"pushup","x-pec-croise-poulie-basse":"fly","x-tractions-australiennes":"row","x-tirage-vertical-machine-convergente":"pulldown","x-dev-epaules-machine":"press","x-pompes-pike":"pushup","x-reverse-pec-deck":"facepull","x-curl-pupitre-machine":"curl","x-squat-poids-du-corps":"squat","x-fente-arriere-poids-du-corps":"lunge","x-pont-fessier":"bridge","x-kickback-poulie":"kick","x-crunch-sol":"crunch","x-pallof-press":"facepull","y-dev-incline-machine":"incline","y-ecartes-inclines-halteres":"fly","y-rowing-pendlay":"row","y-tirage-vertical-unilateral":"pulldown","y-landmine-press":"press","y-y-raise-incline":"facepull","y-curl-concentration":"curl","y-extension-triceps-unilaterale-poulie":"ext","y-pull-through-poulie":"hinge","y-fente-arriere-halteres":"lunge","y-mollets-debout-poids-du-corps":"calf","y-crunch-decline-lest":"crunch","dev-couche-prise-serree":"bench","squat-smith":"squat","presse-unilaterale":"legpress","fente-laterale":"lunge","copenhagen-plank":"plank","tirage-menton-poulie":"shrug","elevations-laterales-machine":"raise","bird-dog":"plank","souleve-terre-jambes-tendues-halteres":"hinge","leg-curl-debout-machine":"legcurl","glute-ham-raise":"legcurl","tractions-assistees-machine":"pullup","hip-thrust-unilateral":"bridge","kickback-machine-fessiers":"kick","mollets-assis-halteres":"calf","curl-barre-droite":"curl","curl-zottman":"curl","curl-araignee":"curl","dips-machine":"dip","hollow-body":"plank","mountain-climbers":"plank","bicycle-crunch":"crunch","face-pull-elastique":"facepull","enrouleur-poignets":"curl","suspension-barre":"hang","curl-inverse-barre-ez":"curl","farmer-walk-halteres":"carry","upright-row-barre-ez":"shrug","pompes-inclinees":"pushup","pompes-archer":"pushup","pompes-claquees":"pushup","pompes-spiderman":"pushup","pompes-prise-large":"pushup","pompes-hindoues":"pushup","pompes-anneaux":"pushup","pompes-poings":"pushup","pompes-tempo":"pushup","pompes-un-bras-assistees":"pushup","pompes-halteres-amplitude":"pushup","pompes-pseudo-planche":"pushup","floor-press-halteres":"bench","dev-couche-smith":"bench","svend-press":"bench","ecartes-sol-halteres":"fly","pull-over-halteres":"fly","rowing-yates":"row","rowing-meadows":"row","rowing-halteres-penche":"row","rowing-unilateral-poulie":"seatedrow","tractions-lestees":"pullup","tractions-archer":"pullup","renegade-row":"row","seal-row":"row","extension-lombaires-45":"hinge","reverse-hyper":"hinge","rack-pull":"deadlift","souleve-barre-hexagonale":"deadlift","z-press":"press","push-press":"press","hspu-mur":"press","bottoms-up-press":"press","elevations-laterales-allonge":"raise","elevations-frontales-poulie":"raise","rotation-externe-poulie":"facepull","shrugs-smith":"shrug","curl-halteres-alterne":"curl","curl-drag":"curl","curl-poulie-haute-double":"curl","curl-barre-prise-large":"curl","curl-bayesian":"curl","jm-press":"skull","skull-crusher-halteres":"skull","dips-lestes":"dip","pushdown-barre-droite":"ext","kickback-halteres":"ext","tate-press":"skull","curl-marteau-corde-poulie":"curl","pince-disques":"carry","fente-avant-halteres":"lunge","squat-zercher":"squat","squat-pause":"squat","pistol-squat-assiste":"squat","leg-extension-unilateral":"legext","step-up-lateral":"lunge","roumain-unilateral-halteres":"hinge","curl-ischios-swiss-ball":"legcurl","pont-fessier-talons-sureleves":"bridge","donkey-kick":"kick","fire-hydrant":"kick","clamshell-elastique":"kick","squat-sumo-halteres":"squat","hip-thrust-halteres":"bridge","mollets-donkey":"calf","saut-corde":"calf","releve-tibial":"calf","adduction-elastique":"kick","adduction-allonge":"kick","releve-genoux-suspendu":"hang","toes-to-bar":"hang","l-sit":"hang","dragon-flag":"hang","v-up":"crunch","bear-plank":"plank","suitcase-carry":"carry","crunch-obliques-poulie":"crunch"};
+const DG_FALL={"pectoraux":"bench","dos-largeur":"pulldown","dos-epaisseur":"row","epaules-ant":"press","epaules-lat":"raise","epaules-post":"facepull","trapezes":"shrug","biceps":"curl","triceps":"ext","avant-bras":"curl","abdos":"crunch","quadriceps":"squat","ischios":"hinge","fessiers":"bridge","mollets":"calf","adducteurs":"kick","lombaires":"hinge"};
+function dgHTML(e){const k=EX_TPL[e.id]||DG_FALL[e.p[0]]||'bench',T=TPL[k];if(!T)return'';
+  const one=T.static,fr=w=>`<figure>${dgframe(T,e.eq,w)}<figcaption>${w==='A'?(one?'Position tenue':'Départ'):'Fin'}</figcaption></figure>`;
+  return `<div class="sec-t label">Schéma</div><div class="dg${one?' one':''}">${fr('A')}${one?'':fr('B')}</div><p class="mute small" style="margin:6px 0 0">Schéma simplifié du type de mouvement (${esc(T.n.toLowerCase())}) : position de départ et de fin, la flèche montre le trajet de la main. Les détails de l'exécution sont dans les étapes ci-dessous.</p>`}
 function exSheet(id){
   const e=EXMAP[id];if(!e)return'';const sv=stars(e),df=diff(e),fav=!!S.prefs.fav[id];
   const alts=EXOS.filter(x=>x.id!==id&&x.p[0]===e.p[0]).sort((a,b)=>stars(b)-stars(a)||diff(a)-diff(b)).slice(0,4);
@@ -1143,6 +1251,7 @@ function exSheet(id){
    <div class="card" style="padding:14px;margin-top:14px"><div class="row" style="justify-content:space-between"><span class="label">Intérêt</span>${starsHTML(sv)}</div><p class="small mute" style="margin:8px 0 12px">${esc(e.sw)}</p>
     <div class="row" style="justify-content:space-between;border-top:1px solid var(--line);padding-top:12px"><span class="label">Difficulté</span><span class="row" style="gap:8px">${gaugeHTML(df)}<span class="small mute">${df}/5 · ${DIFFL[df]}</span></span></div></div>
    <div class="sec-t label">Muscles</div><p style="margin:0"><b>Principaux :</b> ${esc(e.p.map(m=>MUS[m]).join(', '))}</p>${e.s.length?`<p class="mute small" style="margin:4px 0 0"><b>Secondaires :</b> ${esc(e.s.map(m=>MUS[m]).join(', '))}</p>`:''}<p class="mute small" style="margin:4px 0 0">${esc(e.eq)} · ${e.m?'Polyarticulaire':'Isolation'}</p>
+   ${dgHTML(e)}
    ${e.st.length?`<div class="sec-t label">Comment l'exécuter</div><ol class="steps">${e.st.map((s,i)=>`<li><b>${i+1}</b><span>${esc(s)}</span></li>`).join('')}</ol>`:''}
    ${e.w?`<div class="sec-t label">Pourquoi le faire</div><p style="margin:0">${esc(e.w)}</p>`:''}
    ${e.mi.length?`<div class="sec-t label">Erreurs fréquentes</div><ul class="bl w">${e.mi.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`:''}
@@ -1661,6 +1770,7 @@ try{if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)){navigat
   if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{})}catch(e){}
 document.addEventListener('visibilitychange',()=>{const e=E();if(document.visibilityState==='visible'&&e&&e.mode==='run'){try{if(navigator.wakeLock&&navigator.wakeLock.request)navigator.wakeLock.request('screen').then(l=>{wl=l}).catch(()=>{});tickRest()}catch(x){}}});
 window.__IL=S; /* aide au débogage */
+S.dgTest=()=>EXOS.map(e=>dgHTML(e));
 })();
 </script>
 
