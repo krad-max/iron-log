@@ -779,7 +779,7 @@ function coachTab(){
   ${injuriesHTML()}
   <div class="sec"><span class="label">Conseils du moment</span>${adv.length?adv.map(a=>`<div class="card adv"><div class="b">${esc(a.title)}</div><div class="small mute" style="margin-top:4px">${esc(a.text)}</div><div class="row">${a.apply?`<button class="btn primary" data-act="adv-apply" data-k="${esc(a.key)}">${a.label}</button>`:`<button class="btn ghost" data-act="adv-ok" data-k="${esc(a.key)}">C'est noté</button>`}<button class="btn ghost" data-act="adv-no" data-k="${esc(a.key)}">Ignorer</button></div></div>`).join(''):'<div class="card empty">Rien à signaler : continue comme ça. Les conseils (plateau, fatigue, équilibre, muscles oubliés) apparaissent ici.</div>'}</div>
   <div class="sec"><span class="label">Générateur de séance</span><div class="card" style="padding:14px 16px"><p class="small" style="margin:0 0 12px">« Il me reste 45 minutes » : une séance équilibrée en un tap, sans connexion.</p><button class="btn ghost block" data-act="gen-open">Générer une séance</button></div></div>
-  <div class="sec"><span class="label">Coach IA · optionnel</span><div class="card" style="padding:14px 16px">
+  ${(!key&&!S.aiShow)?`<div class="sec"><button class="link" data-act="ai-show" style="padding:4px 0">Coach conversationnel (avancé, nécessite une clé API)</button></div>`:`<div class="sec"><span class="label">Coach IA · optionnel</span><div class="card" style="padding:14px 16px">
    ${key?`<div class="chips" style="margin:0 0 8px;flex-wrap:wrap;margin-right:0">${QUICK.map(([l,q],i)=>`<button class="chip" data-act="chat-quick" data-i="${i}">${l}</button>`).join('')}</div>
     <div class="chat" id="chat">${chatLoad().map(chatMsgHTML).join('')||'<p class="small mute" style="margin:6px 0">Pose une question ou touche une suggestion. Le coach connaît tes séances, tes records, ton programme et ta récupération.</p>'}${S.chatBusy?'<div class="cm a"><span class="mute">Le coach réfléchit…</span></div>':''}</div>
     <textarea id="chat-in" class="field" rows="2" placeholder="Pose ta question…" aria-label="Question au coach">${esc(chatDraft)}</textarea><button class="btn primary block" data-act="chat-send" style="margin-top:8px" ${S.chatBusy?'disabled':''}>Envoyer</button>
@@ -787,7 +787,7 @@ function coachTab(){
     <label class="small mute" style="display:block;margin-top:8px">Modèle<input id="ai-model" class="field" value="${esc(S.prefs.aiModel||'claude-sonnet-5-5')}" style="margin-top:4px"></label>`
    :`<p class="small" style="margin:0 0 10px">Discute avec un coach qui connaît tes données : bilans, analyse de séance, séances sur mesure importables en un tap. Il faut une clé API Anthropic (console.anthropic.com).</p>
     <input id="ai-key" type="password" class="field" placeholder="sk-ant-…" autocomplete="off" aria-label="Clé API Anthropic"><button class="btn primary block" data-act="ai-key-save" style="margin-top:8px">Enregistrer la clé</button>`}
-   <p class="mute small" style="margin:10px 0 0">La clé reste uniquement sur cet appareil (jamais synchronisée) et n'est envoyée qu'à l'API d'Anthropic. Un résumé compact de tes données est envoyé avec chaque question. L'app fonctionne sans le coach IA. Le coach ne remplace ni un médecin ni un coach en salle.</p></div></div>
+   <p class="mute small" style="margin:10px 0 0">La clé reste uniquement sur cet appareil (jamais synchronisée) et n'est envoyée qu'à l'API d'Anthropic. Un résumé compact de tes données est envoyé avec chaque question. L'app fonctionne sans le coach IA. Le coach ne remplace ni un médecin ni un coach en salle.</p></div></div>`}
   ${hist.length?`<div class="sec"><span class="label">Conseils suivis</span><div class="card" style="padding:4px 16px">${hist.map(a=>`<div class="sumrow"><span>${esc(a.title)}</span><span class="mute small">${a.status==='ignored'?'ignoré':'suivi'} · ${fmtD(a.t)}</span></div>`).join('')}</div></div>`:''}`}
 function coachRunSheet(){const e=E(),sh=S.sheet,rec=recovery();
   const rows=e.draft.items.map(it=>{const g=suggest(it.exId),ex=EXMAP[it.exId];if(!g)return `<div class="sumrow"><span>${esc(ex.n)}</span><span class="mute small">première fois</span></div>`;
@@ -1636,6 +1636,7 @@ const A={
   'gen-open'(){openSheet({k:'gen',f:{min:'45',focus:'auto',eq:'all'}})},
   'gen-go'(){const f=S.sheet.f,d=genSession(+f.min,f.focus,f.eq);if(!d.items.length){toast('Aucun exercice trouvé avec ces critères');return}closeSheet();openEditor(d);toast('Séance générée : ajuste-la puis démarre')},
   'ai-key-save'(){const v=($('#ai-key')||{}).value||'';if(v.trim().length<20){toast('Clé invalide');return}try{localStorage.setItem('il-key',v.trim())}catch(e){toast('Impossible d\'enregistrer');return}render();toast('Clé enregistrée sur cet appareil')},
+  'ai-show'(){S.aiShow=true;render()},
   'ai-key-del'(){try{localStorage.removeItem('il-key')}catch(e){}render();toast('Clé retirée')},
   'chat-send'(){aiSend(($('#chat-in')||{}).value)},
   'chat-quick'(el){aiSend(QUICK[+el.dataset.i][1])},
