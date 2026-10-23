@@ -40,4 +40,4 @@ Pour publier une mise à jour, remplace `index.html` et change le nom du cache d
 
 - Pas d'unités en livres (tout est en kg).
 - Pas de synchronisation entre appareils hors sauvegarde manuelle.
-- 277 exercices dans la bibliothèque (extensible avec tes exercices perso), avec un schéma simplifié par exercice.
+- 285 exercices dans la bibliothèque (extensible avec tes exercices perso), avec un schéma simplifié par exercice.
