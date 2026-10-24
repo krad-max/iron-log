@@ -1219,7 +1219,7 @@ function setRow(it,i,s,k,run){
   return `<div class="setwrap" data-s="${k}"><div class="setrow"><span class="n">${s.type==='warmup'?'W':idx}</span>
    <button class="tp" data-t="${s.type}" data-act="type" data-i="${i}" data-s="${k}" style="${s.type==='normal'?'':'background:var('+t.c+')'}" aria-label="Type de série : ${t.name}">${t.short}</button>
    <span class="prev">${prevText(it,k)}</span>
-   <input class="num" inputmode="decimal" data-f="kg" data-i="${i}" data-s="${k}" value="${s.kg==null?'':fmtN(s.kg)}" placeholder="0" aria-label="Kilos, série ${k+1}">
+   <input class="num" inputmode="decimal" data-f="kg" data-i="${i}" data-s="${k}" value="${s.kg==null?'':fmtN(s.kg)}" placeholder="${BWF[it.exId]?'—':'0'}" aria-label="${BWF[it.exId]?'Lest ajouté en kilos (facultatif)':'Kilos'}, série ${k+1}">
    <input class="num" inputmode="numeric" data-f="reps" data-i="${i}" data-s="${k}" value="${s.reps==null?'':s.reps}" placeholder="0" aria-label="Répétitions, série ${k+1}">
    ${run?`<button class="chk ${s.done?'on':''}" data-act="done" data-i="${i}" data-s="${k}" aria-label="Valider la série ${k+1}" aria-pressed="${!!s.done}">✓</button>`:`<button class="grip" data-grip="set" aria-label="Déplacer la série" style="width:28px;height:30px">≡</button>`}
   </div>${run?`<div class="prline" data-pl="${i}-${k}">${prlineHTML(s)}</div>`:''}${drops}</div>`}
@@ -1238,7 +1238,7 @@ function itemHTML(it,i,run){
   <div class="meta"><button data-act="rest" data-i="${i}"><span class="label">Repos</span><b>${restLabel(it.rest)}</b></button>
    <span class="m"><span class="label">Séries</span><b>${counted(it).length}</b></span>
    <button data-act="tempo" data-i="${i}"><span class="label">Tempo</span><b>${it.tempo||'Aucun'}</b></button></div>
-  ${run?sugHTML(it,i):''}<div class="sets"><div class="sethead"><span class="label">#</span><span class="label">Type</span><span class="label">Préc.</span><span class="label">Kg</span><span class="label">Reps</span><span></span></div>
+  ${run?sugHTML(it,i):''}<div class="sets"><div class="sethead"><span class="label">#</span><span class="label">Type</span><span class="label">Préc.</span><span class="label">${BWF[it.exId]?'Lest':'Kg'}</span><span class="label">Reps</span><span></span></div>
    ${it.sets.map((s,k)=>setRow(it,i,s,k,run)).join('')}</div>
   <button class="dashed" data-act="add-set" data-i="${i}">+ Ajouter une série</button></article>`}
 function editorView(){
@@ -1270,7 +1270,7 @@ function tickRest(){const e=E();if(!e||!e.timer)return;const l=restLeft(),t=$('#
 function updateStats(){const e=E();if(!e)return;const st=stats(e.draft);const a=$('#st-exos'),b=$('#st-sets'),c=$('#st-dur');if(a)a.textContent=st.exos;if(b)b.textContent=st.sets;if(c&&e.mode!=='run')c.textContent='~'+fmtDur(st.dur)}
 
 /* Bande −/+ qui apparaît sous la série dont un champ a le focus */
-function stepperHTML(){return `<div class="sg"><span class="label">Kg</span><button class="sb" data-act="step" data-f="kg" data-d="-1" aria-label="Moins de kilos">−</button><button class="sb" data-act="step" data-f="kg" data-d="1" aria-label="Plus de kilos">+</button></div>
+function stepperHTML(bw){return `<div class="sg"><span class="label">${bw?'Lest':'Kg'}</span><button class="sb" data-act="step" data-f="kg" data-d="-1" aria-label="Moins de kilos">−</button><button class="sb" data-act="step" data-f="kg" data-d="1" aria-label="Plus de kilos">+</button></div>
   <button class="chip" data-act="step-size" aria-label="Pas des kilos">± ${fmtN(S.step)} kg</button>
   <div class="sg"><span class="label">Reps</span><button class="sb" data-act="step" data-f="reps" data-d="-1" aria-label="Moins de répétitions">−</button><button class="sb" data-act="step" data-f="reps" data-d="1" aria-label="Plus de répétitions">+</button></div>`}
 function stepper2HTML(i,k,run){const s=E().draft.items[i].sets[k];
@@ -1278,7 +1278,7 @@ function stepper2HTML(i,k,run){const s=E().draft.items[i].sets[k];
 function hideStepper(){$$('.stepper,.stepper2').forEach(x=>x.remove())}
 function showStepper(inp){
   hideStepper();const wrap=inp.closest('.setwrap');if(!wrap||inp.closest('.drops'))return;
-  const d=document.createElement('div');d.className='stepper';d.dataset.i=inp.dataset.i;d.dataset.s=inp.dataset.s;d.innerHTML=stepperHTML();
+  const d=document.createElement('div');d.className='stepper';d.dataset.i=inp.dataset.i;d.dataset.s=inp.dataset.s;{const ee=E(),itx=ee&&ee.draft.items[+inp.dataset.i];d.innerHTML=stepperHTML(!!(itx&&BWF[itx.exId]))}
   wrap.querySelector('.setrow').after(d);
   const e=E();d.insertAdjacentHTML('afterend',stepper2HTML(+inp.dataset.i,+inp.dataset.s,e&&e.mode==='run'));
 }
