@@ -583,8 +583,8 @@ function planInfo(){const p=S.prefs.plan;if(!p)return null;const m=monday(Date.n
   return{p,w,weeks:p.weeks,done:w>=p.weeks,deload:!!p.deload&&p.weeks>=3&&w===p.weeks-1}}
 const dayStart=t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()};
 const todayIdx=()=>(new Date().getDay()+6)%7;
-function refName(ref){if(!ref)return'';const id=ref.slice(4);if(ref.startsWith('tpl:')){const t=S.templates.find(x=>x.id===id);return t?t.name:''}const r=PRESETS.find(x=>x.id===id);return r?r.name:''}
-function refDraft(ref){const id=ref.slice(4);if(ref.startsWith('tpl:')){const t=S.templates.find(x=>x.id===id);return t?clone(t):null}const r=PRESETS.find(x=>x.id===id);return r?fromPreset(r):null}
+function refName(ref){if(!ref)return'';if(ref==='free')return'Séance au choix';const id=ref.slice(4);if(ref.startsWith('tpl:')){const t=S.templates.find(x=>x.id===id);return t?t.name:''}const r=PRESETS.find(x=>x.id===id);return r?r.name:''}
+function refDraft(ref){if(!ref||ref==='free')return null;const id=ref.slice(4);if(ref.startsWith('tpl:')){const t=S.templates.find(x=>x.id===id);return t?clone(t):null}const r=PRESETS.find(x=>x.id===id);return r?fromPreset(r):null}
 function weekDotsHTML(){const pi=planInfo(),td=todayIdx(),m=monday(Date.now()),L=['L','M','M','J','V','S','D'];
   return `<div class="wkdots" role="list" aria-label="Semaine en cours">${L.map((l,i)=>{const d=new Date(m);d.setDate(d.getDate()+i);const k=dayKey(d.getTime()),did=S.sessions.some(x=>dayKey(x.startedAt)===k),pl=pi&&!pi.done&&pi.p.days[i]&&d.getTime()>=dayStart(pi.p.created||0);
     let st=i===td?(did?'today-done':'today'):did?'done':(pl&&i<td)?'missed':pl?'planned':'rest';
@@ -597,13 +597,17 @@ function planCardHTML(){
   let body='';
   if(pi.done)body=`<p class="small" style="margin:10px 0 12px">Cycle terminé (${pi.weeks} semaines). Bravo.</p><button class="btn primary block" data-act="plan-restart">Recommencer un cycle</button>`;
   else if(!ref||!refName(ref))body=`<p class="small mute" style="margin:10px 0 0">Jour de repos${did?' (tu as quand même bougé, bien joué)':''}.</p>`;
+  else if(ref==='free'){const td=S.sessions.filter(x=>dayKey(x.startedAt)===dayKey(Date.now()));
+    body=did?`<div style="margin-top:10px"><div class="b" style="font-size:16px">Séance du jour faite ✓</div><div class="mute small">${td.map(x=>esc(x.name)).join(' · ')} · ${td.reduce((a,x)=>a+sesSets(x),0)} séries</div></div>`
+      :`<div style="margin-top:10px"><div class="b" style="font-size:16px">Séance au choix</div><div class="mute small">Fais la séance que tu veux : elle comptera comme ta séance du jour.</div></div>
+       <button class="btn primary block" data-act="new-session" style="margin-top:12px">+ Nouvelle séance</button><button class="btn ghost block" data-act="gen-open" style="margin-top:8px">Générer une séance</button>`}
   else{const d=refDraft(ref),st=stats(d),last=S.sessions.find(x=>x.name===d.name);
     body=`<div style="margin-top:10px"><div class="b" style="font-size:16px">${esc(d.name)}</div><div class="mute small">${st.exos} exos · ${st.sets} séries · ~${fmtDur(st.dur)}</div>${last?`<div class="mute small" style="margin-top:2px">Dernière fois : ${fmtDate(last.startedAt)}, ${Math.round(sesVol(last)).toLocaleString('fr-FR')} kg</div>`:''}</div>
      ${(pi.deload||S.prefs.deloadUntil>Date.now())?`<div class="sug warn" style="margin:10px 0 0"><span class="sp"><b>Semaine de décharge</b> : charges −10 %, séries −40 %, pour récupérer.</span></div>`:''}
      ${did?`<p class="small" style="margin:10px 0 0"><b>Séance faite aujourd'hui ✓</b></p>`:`<button class="btn primary block" data-act="plan-start" style="margin-top:12px">Démarrer</button>`}`}
   return `<div class="card" style="padding:16px"><div class="row"><span class="label sp">Programme · ${esc(pi.p.name)}</span><span class="badge">${pi.done?'Terminé':'Sem. '+(pi.w+1)+'/'+pi.weeks+(pi.deload?' · décharge':'')}</span></div>${weekDotsHTML()}${body}<button class="link" data-act="plan-edit" style="margin-top:12px">Modifier le programme ›</button></div>`}
-function planForm(){const p=S.prefs.plan;const f={name:p?p.name:'Mon programme',weeks:String(p?p.weeks:6),deload:p?(p.deload?'1':'0'):'1',prog:String(p?p.prog:2.5)};for(let i=0;i<7;i++)f['d'+i]=p?p.days[i]||'':'';return f}
-function refOptions(sel){return `<option value="">Repos</option><optgroup label="Mes séances">${S.templates.map(t=>`<option value="tpl:${t.id}" ${sel==='tpl:'+t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</optgroup><optgroup label="Modèles">${PRESETS.map(r=>`<option value="pre:${r.id}" ${sel==='pre:'+r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</optgroup>`}
+function planForm(){const p=S.prefs.plan;const f={name:p?p.name:'Mon programme',weeks:String(p?p.weeks:6),deload:p?(p.deload?'1':'0'):'1',prog:String(p?p.prog:2.5)};for(let i=0;i<7;i++)f['d'+i]=p?p.days[i]||'':([0,2,4].includes(i)?'free':'');return f}
+function refOptions(sel){return `<option value="">Repos</option><option value="free" ${sel==='free'?'selected':''}>Séance au choix</option><optgroup label="Mes séances">${S.templates.map(t=>`<option value="tpl:${t.id}" ${sel==='tpl:'+t.id?'selected':''}>${esc(t.name)}</option>`).join('')}</optgroup><optgroup label="Modèles">${PRESETS.map(r=>`<option value="pre:${r.id}" ${sel==='pre:'+r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</optgroup>`}
 function planSheet(){const f=S.sheet.f,opt=(arr,cur)=>arr.map(([v,l])=>`<option value="${v}" ${String(cur)===String(v)?'selected':''}>${l}</option>`).join('');
   return panel(`<div class="ptitle">Mon programme</div><div class="pbody">
    <label class="label" for="pl-name">Nom</label><input id="pl-name" class="field" data-ex="name" value="${esc(f.name)}" maxlength="40" style="margin:6px 0 12px">
@@ -612,10 +616,12 @@ function planSheet(){const f=S.sheet.f,opt=(arr,cur)=>arr.map(([v,l])=>`<option 
    <label style="display:block;margin:12px 0"><span class="label">Dernière semaine</span><select class="field" data-ex="deload" style="margin-top:6px">${opt([['1','Décharge (charges −10 %, séries −40 %)'],['0','Comme les autres']],f.deload)}</select></label>
    <span class="label">Planning de la semaine</span>
    ${WD.map((d,i)=>`<label class="row" style="margin-top:8px"><span style="width:84px;font-size:14px">${d}</span><select class="field sp" data-ex="d${i}" aria-label="${d}">${refOptions(f['d'+i])}</select></label>`).join('')}
+   <button class="link" data-act="plan-free" style="margin-top:10px;text-align:left">Mes jours d'entraînement : séance au choix</button>
+   <p class="mute small" style="margin-top:6px">« Séance au choix » : ce jour-là, tu fais la séance que tu veux ; toute séance enregistrée ce jour-là compte.</p>
    <p class="mute small" style="margin-top:10px">« Progression » : à chaque séance du programme, la charge proposée est la dernière charge +X %. Ajuste-la pendant la séance si besoin.</p></div>
    <div class="pfoot"><button class="btn primary block" data-act="plan-save">Enregistrer le programme</button>${S.prefs.plan?`<button class="btn ghost block" data-act="plan-restart">Repartir de la semaine 1</button><button class="btn danger block" data-act="plan-del-ask">Supprimer le programme</button>`:''}</div>`,true)}
 function startPlanned(){
-  const pi=planInfo();if(!pi||pi.done)return;const ref=refToday(),d=ref&&refDraft(ref);const dl=pi.deload||(S.prefs.deloadUntil>Date.now());if(!d){toast('Pas de séance prévue aujourd\'hui');return}
+  const pi=planInfo();if(!pi||pi.done)return;const ref=refToday(),d=ref&&refDraft(ref);if(ref==='free'){S.tab='sessions';openEditor(newDraft());return}const dl=pi.deload||(S.prefs.deloadUntil>Date.now());if(!d){toast('Pas de séance prévue aujourd\'hui');return}
   d.cycle=pi.p.name;openEditor(d);A.start();
   const e=E(),f=dl?0.9:(pi.w>0?1+(pi.p.prog||0)/100:1);
   e.draft.items.forEach(it=>{
@@ -925,7 +931,7 @@ const notifOK=()=>('Notification' in window)&&Notification.permission==='granted
 function notify(title,body,tag){try{if(!notifOK())return false;
   if(navigator.serviceWorker&&navigator.serviceWorker.getRegistration){navigator.serviceWorker.getRegistration().then(r=>{if(r&&r.showNotification)r.showNotification(title,{body,tag,icon:'icon-192.png',badge:'icon-192.png'});else new Notification(title,{body,tag})}).catch(()=>{try{new Notification(title,{body,tag})}catch(e){}})}else new Notification(title,{body,tag});return true}catch(e){return false}}
 function inQuiet(r){const n=new Date(),m=n.getHours()*60+n.getMinutes(),f=hmin(r.qFrom),t=hmin(r.qTo);return f<=t?(m>=f&&m<t):(m>=f||m<t)}
-function smartMsg(ref){const d=refDraft(ref);if(!d)return'';const last=S.sessions.find(x=>x.name===d.name);let s=d.name+' aujourd\'hui';
+function smartMsg(ref){if(ref==='free')return'Séance du jour : fais celle que tu veux aujourd\'hui.';const d=refDraft(ref);if(!d)return'';const last=S.sessions.find(x=>x.name===d.name);let s=d.name+' aujourd\'hui';
   if(last&&last.entries[0]){const en=last.entries[0],t=work(en.sets).reduce((a,x)=>x.kg>a.kg?x:a,{kg:0,reps:0});if(t.kg>0)s+=` — dernière fois ${fmtN(t.kg)} kg × ${t.reps} (${EXMAP[en.exId]?EXMAP[en.exId].n:''}), tu peux faire mieux.`}return s}
 function remBanners(){const r=remGet(),pi=planInfo(),out=[],k=dayKey(Date.now());let hid={};try{hid=JSON.parse(localStorage.getItem('il-hide')||'{}')}catch(e){}
   if(pi&&!pi.done){const p=pi.p,yi=(todayIdx()+6)%7,yk=dayKey(Date.now()-DAYMS),ref=p.over&&yk in p.over?p.over[yk]:p.days[yi];
@@ -946,8 +952,8 @@ function icsDT(d,min){const p=n=>String(n).padStart(2,'0');return d.getFullYear(
 function nextDow(i){const d=new Date();d.setHours(0,0,0,0);while((d.getDay()+6)%7!==i)d.setDate(d.getDate()+1);return d}
 function buildICS(){const r=remGet(),p=S.prefs.plan,pi=planInfo(),ev=[],stamp=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z',lead=r.lead==null?30:r.lead;
   const add=(uid2,sum,desc,dt,end,rule)=>ev.push(['BEGIN:VEVENT','UID:'+uid2+'@iron-log','DTSTAMP:'+stamp,'DTSTART:'+dt,'DTEND:'+end,rule,'SUMMARY:'+icsEsc(sum),'DESCRIPTION:'+icsEsc(desc),'BEGIN:VALARM','TRIGGER:-PT'+lead+'M','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(sum),'END:VALARM','END:VEVENT'].filter(Boolean).join('\r\n'));
-  if(p&&pi&&!pi.done)p.days.forEach((ref,i)=>{if(!ref||!refName(ref)||(r.off||{})[i])return;const d=nextDow(i),t=hmin((r.times||[])[i]||'18:30'),dd=refDraft(ref),len=Math.max(30,Math.round(stats(dd).dur/60/15)*15);
-    add('s'+i+'-'+Date.now(),'Iron Log · '+refName(ref),'Séance prévue : '+refName(ref)+' ('+stats(dd).exos+' exercices).',icsDT(d,t),icsDT(d,t+len),'RRULE:FREQ=WEEKLY;COUNT='+Math.max(1,pi.weeks-pi.w))});
+  if(p&&pi&&!pi.done)p.days.forEach((ref,i)=>{if(!ref||!refName(ref)||(r.off||{})[i])return;const d=nextDow(i),t=hmin((r.times||[])[i]||'18:30'),dd=refDraft(ref),len=dd?Math.max(30,Math.round(stats(dd).dur/60/15)*15):60;
+    add('s'+i+'-'+Date.now(),'Iron Log · '+refName(ref),dd?'Séance prévue : '+refName(ref)+' ('+stats(dd).exos+' exercices).':'Séance du jour : au choix.',icsDT(d,t),icsDT(d,t+len),'RRULE:FREQ=WEEKLY;COUNT='+Math.max(1,pi.weeks-pi.w))});
   if(r.weigh){const d=nextDow(r.weighDay),t=hmin(r.weighTime);add('w-'+Date.now(),'Iron Log · pesée','Note ton poids et tes mensurations.',icsDT(d,t),icsDT(d,t+10),'RRULE:FREQ=WEEKLY')}
   if(r.backup){const d=new Date();d.setMonth(d.getMonth()+1,1);d.setHours(9,0,0,0);add('b-'+Date.now(),'Iron Log · sauvegarde','Exporte tes données (Profil > Exporter une sauvegarde).',icsDT(d,540),icsDT(d,550),'RRULE:FREQ=MONTHLY')}
   return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Iron Log//FR','CALSCALE:GREGORIAN'].concat(ev,['END:VCALENDAR']).join('\r\n')}
@@ -1753,6 +1759,7 @@ const A={
   'plan-del-ask'(){openSheet({k:'confirm',title:'Supprimer le programme ?',msg:'Tes séances et ton historique sont conservés.',yes:'plan-del'})},
   'plan-del'(){S.prefs.plan=null;persist('prefs');closeSheet();render()},
   'plan-start'(){startPlanned()},
+  'plan-free'(){const f=S.sheet.f;for(let i=0;i<7;i++)if(f['d'+i])f['d'+i]='free';renderOv();toast('Tous tes jours : séance au choix')},
   'goal-add'(){const ex=Object.keys(HIST)[0]||'dev-couche-barre';openSheet({k:'goal',f:{kind:'e1',ex,target:''}})},
   'goal-save'(){const f=S.sheet.f,t=num(f.target);if(!(t>0)){toast('Entre une valeur à atteindre');return}
     (S.prefs.goals=S.prefs.goals||[]).push({id:uid(),kind:f.kind,exId:f.kind==='body'?null:f.ex,target:t,t:Date.now()});persist('prefs');closeSheet();render();toast('Objectif ajouté')},
