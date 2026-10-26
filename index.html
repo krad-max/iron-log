@@ -1569,6 +1569,7 @@ function sheetHTML(){
     return panel(`<div class="ptitle">Modifier la séance</div><div class="pbody">
      <label class="label" for="se-name">Nom</label><input id="se-name" class="field" data-se="name" value="${esc(d.name)}" style="margin:6px 0 10px">
      ${d.entries.map((en,i)=>`<div style="padding:10px 0;border-top:1px solid var(--line)"><div class="b">${esc(EXMAP[en.exId]?EXMAP[en.exId].n:'Exercice')}</div>
+      <label class="small mute" style="display:block;margin:4px 0">Repos entre les séries <select class="field" data-se="${i}:rest" style="margin-top:4px">${RESTS.map(r=>`<option value="${r[0]}" ${(en.rest!=null?en.rest:(d.rest||90))===r[0]?'selected':''}>${r[1]}</option>`).join('')}</select></label>
       ${en.sets.map((x,j)=>`<div class="setedit"><span class="mute">${j+1}</span><input class="field" inputmode="decimal" data-se="${i}:${j}:kg" value="${x.kg==null?'':fmtN(x.kg)}" aria-label="Kilos série ${j+1}" placeholder="kg"><input class="field" inputmode="numeric" data-se="${i}:${j}:reps" value="${x.reps==null?'':x.reps}" aria-label="Répétitions série ${j+1}" placeholder="reps"><button class="iconbtn sm" data-act="se-set-del" data-i="${i}" data-j="${j}" aria-label="Supprimer la série ${j+1}">✕</button></div>`).join('')}
       <div class="row" style="margin-top:6px"><button class="link sp" style="text-align:left" data-act="se-set-add" data-i="${i}">+ Série</button><button class="link" style="color:var(--danger)" data-act="se-ex-del" data-i="${i}">Retirer l'exercice</button></div></div>`).join('')}
      <div class="sec-t label">Ajouter un exercice</div><input id="se-q" class="field" type="search" placeholder="Rechercher (pompes, tractions, squat…)" value="${esc(sh0q(S.sheet))}" aria-label="Ajouter un exercice" autocomplete="off"><div id="se-res">${seResHTML(S.sheet)}</div>
@@ -1832,6 +1833,7 @@ const A={
   'se-ex-add'(el){const d=S.sheet.d,id=el.dataset.id,e0=EXMAP[id];if(!e0)return;d.entries.push({exId:id,note:'',sets:Array.from({length:3},()=>({type:'normal',kg:BWF[id]?0:null,reps:null}))});S.sheet.q='';renderOv();const pb=$('.pbody',$('#ov'));if(pb)pb.scrollTop=pb.scrollHeight;toast(e0.n+' ajouté : renseigne les répétitions')},
   'se-set-del'(el){const d=S.sheet.d,en=d.entries[+el.dataset.i];en.sets.splice(+el.dataset.j,1);if(!en.sets.length)d.entries.splice(+el.dataset.i,1);renderOv()},
   'ses-edit-save'(){const d=S.sheet.d,i=S.sessions.findIndex(x=>x.id===d.id);if(i<0)return;d.entries.forEach(en=>{en.sets=en.sets.filter(x=>x.type==='warmup'||x.reps>0||x.kg>0)});d.entries=d.entries.filter(en=>en.sets.length);if(!d.entries.length){toast('Une séance doit garder au moins une série');return}
+    if(d.manual){let t=d.startedAt+120000;d.entries.forEach(en=>{const r=en.rest!=null?en.rest:(d.rest||90);en.sets.forEach(x=>{t+=(45+r)*1000;x.at=t})});if(d.endedAt<t)d.endedAt=t+180000}
     d.name=(d.name||'').trim()||'Séance';S.sessions[i]=d;persist('ses',d);buildPrev();closeSheet();render();toast('Séance modifiée')},
   'sil-lib'(el){const g=GROUPS.find(x=>x.l===el.dataset.g);if(g){S.group=g.id;S.tab='lib';render()}},
   'em-busy'(){openSheet({k:'alt',i:S.sheet.i})},
@@ -1915,7 +1917,7 @@ document.addEventListener('input',ev=>{const t=ev.target;
   if(t.dataset.cr&&S.sheet){S.sheet.q=t.value;return}
   if(t.id==='h-q'){histQ=t.value;histMax=15;const l=$('#h-list');if(l)l.innerHTML=histListHTML();return}
   if(t.id==='se-q'&&S.sheet&&S.sheet.k==='sesedit'){S.sheet.q=t.value;const r=$('#se-res');if(r)r.innerHTML=seResHTML(S.sheet);return}
-  if(t.dataset.se&&S.sheet&&S.sheet.d){const k=t.dataset.se,d=S.sheet.d;if(k==='name'||k==='note')d[k]=t.value;else{const [i,j,f]=k.split(':'),x=d.entries[+i].sets[+j],v=num(t.value);x[f]=v>0?v:(f==='kg'&&t.value.trim()!==''&&v===0?0:null)}return}
+  if(t.dataset.se&&S.sheet&&S.sheet.d){const k=t.dataset.se,d=S.sheet.d;if(k==='name'||k==='note')d[k]=t.value;else if(/^\d+:rest$/.test(k))d.entries[+k.split(':')[0]].rest=+t.value;else{const [i,j,f]=k.split(':'),x=d.entries[+i].sets[+j],v=num(t.value);x[f]=v>0?v:(f==='kg'&&t.value.trim()!==''&&v===0?0:null)}return}
   if(t.dataset.fs&&S.sheet&&S.sheet.ses){S.sheet.ses[t.dataset.fs]=t.value||null;if(t.tagName==='SELECT')persist('ses',S.sheet.ses);return}
   if(t.id==='pick-q'){S.sheet.q=t.value;const l=$('#pick-list');if(l)l.innerHTML=pickListHTML();return}
   if(t.dataset.note){const id=t.dataset.note;if(t.value.trim())S.prefs.notes[id]=t.value;else delete S.prefs.notes[id];clearTimeout(t._tm);t._tm=setTimeout(()=>persist('prefs'),400);return}
