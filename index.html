@@ -635,19 +635,21 @@ function startPlanned(){
 const GK={e1:'1RM estimé',kg:'Charge max',reps:'Répétitions max (sans charge)',body:'Poids de corps'};
 function bodyList(){return (S.prefs.body||[]).slice().sort((a,b)=>a.t-b.t)}
 /* Poids de corps déplacé (fraction du poids du corps) pour les exercices au poids du corps ; estimations. KG saisi = lest ajouté. */
-const BWF={'pompes':.64,'pompes-lestees':.64,'pompes-diamant':.64,'x-pompes-genoux':.49,'pompes-inclinees':.55,'x-pompes-pieds-surleves':.74,'pompes-archer':.8,'pompes-claquees':.64,'pompes-spiderman':.64,'pompes-prise-large':.64,'pompes-hindoues':.6,'pompes-anneaux':.7,'pompes-poings':.64,'pompes-tempo':.64,'pompes-un-bras-assistees':.75,'pompes-pseudo-planche':.75,'x-pompes-pike':.7,'hspu-mur':.9,'pompes-deux-plots':.64,'pompes-pieds-plot':.74,'pike-plots':.75,
+const BWX={'pompes':.64,'pompes-lestees':.64,'pompes-diamant':.64,'x-pompes-genoux':.49,'pompes-inclinees':.55,'x-pompes-pieds-surleves':.74,'pompes-archer':.8,'pompes-claquees':.64,'pompes-spiderman':.64,'pompes-prise-large':.64,'pompes-hindoues':.6,'pompes-anneaux':.7,'pompes-poings':.64,'pompes-tempo':.64,'pompes-un-bras-assistees':.75,'pompes-pseudo-planche':.75,'x-pompes-pike':.7,'hspu-mur':.9,'pompes-deux-plots':.64,'pompes-pieds-plot':.74,'pike-plots':.75,
  'dips-pecs':.95,'dips-lestes':.95,'dips-barres-paralleles':.95,'dips-deux-plots':.95,'dips-banc':.6,
  'tractions-pronation':1,'tractions-supination':1,'tractions-neutres':1,'tractions-lestees':1,'tractions-archer':1,'tractions-explosives':1,'muscle-up':1,
  'rowing-inverse':.55,'x-tractions-australiennes':.55,
  'x-squat-poids-du-corps':.75,'sissy-squat':.6,'pistol-squat-assiste':.8,'x-fente-arriere-poids-du-corps':.7,'fente-laterale':.7,'step-up-lateral':.8,'step-up-plot':.8,'squat-bulgare-plot':.8,'fente-deficit-plot':.75,
  'nordic-curl':.5,'glute-ham-raise':.6,'x-pont-fessier':.5,'pont-fessier-unijambiste':.6,'pont-fessier-talons-sureleves':.5,'hip-thrust-unilateral':.6,'hip-thrust-plot':.6,'y-mollets-debout-poids-du-corps':1,'mollets-donkey':.7,
  'hyperextension':.45,'extension-lombaires-45':.45,'releve-jambes-suspendu':.35,'releve-genoux-suspendu':.25,'toes-to-bar':.4,'v-up':.35,'crunch-inverse':.25,'x-crunch-sol':.2,'bicycle-crunch':.2,'curl-ischios-swiss-ball':.45,'curl-ischios-serviette':.35,'dragon-flag':.6};
+/* Seules fractions appuyées par une étude : Ebben et al. 2011, J Strength Cond Res 25(10) — force verticale maximale sur les mains, en % du poids du corps : pompes standard 64 %, sur les genoux 49 %, mains sur boîte de 30,5 cm 55 %, pieds sur boîte de 61 cm 74 %. Tout le reste (BWX) sert seulement à reconnaître les exercices au poids du corps, sans calcul de charge. */
+const BWF={'pompes':.64,'pompes-lestees':.64};
 const effTxt=y=>y._add!=null?`${y.reps||0} reps${y._add>0?' +'+fmtN(y._add)+' kg':''}`:(y.kg>0?fmtN(y.kg)+'×'+(y.reps||0):(y.reps||0)+' reps');
-const VARS={'pompes':[['gen','Sur les genoux',.49],['inc','Mains surélevées',.55],['dec','Pieds surélevés',.74],['dia','Diamant',.64],['lar','Prise large',.64],['arc','Archer',.8],['pike','Pike',.7],['exp','Explosives',.64],['tmp','Lentes (tempo)',.64],['poi','Sur poings',.64],['ann','Aux anneaux',.7],['psp','Pseudo planche',.75],['hin','Hindoues',.6],['un','Un bras assistées',.75]],
+const VARS={'pompes':[['gen','Sur les genoux',.49],['inc','Mains surélevées (30 cm)',.55],['dec','Pieds surélevés (60 cm)',.74],['dia','Diamant',0],['lar','Prise large',0],['arc','Archer',0],['pike','Pike',0],['exp','Explosives',0],['tmp','Lentes (tempo)',0],['poi','Sur poings',0],['ann','Aux anneaux',0],['psp','Pseudo planche',0],['hin','Hindoues',0],['un','Un bras assistées',0]],
  'tractions-pronation':[['sup','Supination (chin-up)'],['neu','Prise neutre'],['lar','Prise large'],['ser','Prise serrée'],['arc','Archer'],['exp','Explosives'],['neg','Négatives (descente lente)']],
- 'dips-barres-paralleles':[['pec','Buste penché (pecs)'],['ban','Sur banc / plot',.6],['plo','Sur deux plots'],['neg','Négatifs']],
- 'rowing-inverse':[['gen','Genoux fléchis',.4],['dec','Pieds surélevés',.7],['sup','Prise supination'],['lar','Prise large']],
- 'x-squat-poids-du-corps':[['sis','Sissy squat',.6],['pis','Pistolet assisté',.8],['sau','Sautés'],['pau','Pause en bas']]};
+ 'dips-barres-paralleles':[['pec','Buste penché (pecs)'],['ban','Sur banc / plot'],['plo','Sur deux plots'],['neg','Négatifs']],
+ 'rowing-inverse':[['gen','Genoux fléchis'],['dec','Pieds surélevés'],['sup','Prise supination'],['lar','Prise large']],
+ 'x-squat-poids-du-corps':[['sis','Sissy squat'],['pis','Pistolet assisté'],['sau','Sautés'],['pau','Pause en bas']]};
 const VFAM={'dips-pecs':'dips-barres-paralleles'};
 const VARMAP={'x-pompes-genoux':['pompes','gen'],'pompes-inclinees':['pompes','inc'],'x-pompes-pieds-surleves':['pompes','dec'],'pompes-pieds-plot':['pompes','dec'],'pompes-diamant':['pompes','dia'],'pompes-prise-large':['pompes','lar'],'pompes-archer':['pompes','arc'],'x-pompes-pike':['pompes','pike'],'pompes-claquees':['pompes','exp'],'pompes-tempo':['pompes','tmp'],'pompes-poings':['pompes','poi'],'pompes-anneaux':['pompes','ann'],'pompes-pseudo-planche':['pompes','psp'],'pompes-hindoues':['pompes','hin'],'pompes-un-bras-assistees':['pompes','un'],
  'tractions-supination':['tractions-pronation','sup'],'tractions-neutres':['tractions-pronation','neu'],'tractions-archer':['tractions-pronation','arc'],'tractions-explosives':['tractions-pronation','exp'],'dips-banc':['dips-barres-paralleles','ban'],'dips-deux-plots':['dips-barres-paralleles','plo'],'dips-pecs':['dips-barres-paralleles','pec'],'sissy-squat':['x-squat-poids-du-corps','sis'],'pistol-squat-assiste':['x-squat-poids-du-corps','pis']};
@@ -656,7 +658,7 @@ const varOf=(id,v)=>{const l=varList(id);return l&&v?l.find(x=>x[0]===v)||null:n
 const varLabel=(id,v)=>{const x=varOf(id,v);return x?x[1]:''};
 const varSel=(id,v,attr)=>{const l=varList(id);return l?`<select class="field" ${attr}><option value="">Normale (standard)</option>${l.map(x=>`<option value="${x[0]}" ${v===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select>`:''};
 function bwAt(t){const L=bodyList().filter(x=>x.kg>0);if(!L.length)return null;let r=L[0].kg;L.forEach(x=>{if(x.t<=t+DAYMS)r=x.kg});return r}
-function effSets(exId,sets,t,v){const vv=varOf(exId,v),f=vv&&vv[2]?vv[2]:BWF[exId];if(!f)return sets;const bw=bwAt(t);if(!bw)return sets;const add=Math.round(f*bw*10)/10;
+function effSets(exId,sets,t,v){const vv=varOf(exId,v),f=vv&&vv.length>2?vv[2]:BWF[exId];if(!f)return sets;const bw=bwAt(t);if(!bw)return sets;const add=Math.round(f*bw*10)/10;
   return sets.map(x=>x.type==='warmup'?x:Object.assign({},x,{kg:Math.round(((x.kg||0)+add)*10)/10,_add:x.kg||0,drops:x.drops?x.drops.map(d=>Object.assign({},d,{kg:Math.round(((d.kg||0)+add)*10)/10})):x.drops}))}
 function goalInfo(g){
   let pts,cur,start;
@@ -730,17 +732,11 @@ function balanceHTML(){
 /* ───────── Coach : règles locales ───────── */
 /* Récupération : fatigue cumulée par muscle. Chaque série (primaire 1, secondaire 0,5) ajoute une charge, plus forte près de l'échec,
    qui décroît de moitié toutes les H heures (30 h par défaut, 40 h jambes, 36 h dos, 24 h petits muscles). Récupéré % = 100 × (1 − fatigue / 12). */
-const REC_H={'Jambes':40,'Dos':36,'Avant-bras':24,'Mollets':24,'Abdos':24},REC_MAX=12;
-function setLoad(x){if(x.type==='warmup')return 0;let f=1;if(['failure','drop','restpause','myo','amrap'].includes(x.type))f=1.3;else if(x.rpe>=9)f=1.25;else if(x.rpe>=8)f=1.1;else if(x.rpe&&x.rpe<=6)f=0.8;return f}
-function recovery(){const out={},now=Date.now(),F={};GROUPS.forEach(g=>{out[g.l]={pct:100,last:null,sets:0,pain:false,fat:0};F[g.l]=0});
+function recDays(){return S.prefs.restDays||2}
+/* Récupération : aucune donnée d'étude ne donne un « % récupéré » fiable. On affiche simplement le temps écoulé depuis la dernière séance qui a travaillé le groupe, rapporté au repos souhaité (réglage personnel, 2 jours par défaut). */
+function recovery(){const out={},now=Date.now(),need=recDays()*24;GROUPS.forEach(g=>{out[g.l]={pct:100,last:null,sets:0,pain:false,fat:0,need:0}});
   S.sessions.slice().sort((a,b)=>b.startedAt-a.startedAt).forEach(se=>{
-    const t=se.endedAt||se.startedAt,hrs=Math.max(0,(now-t)/3600000);if(hrs>14*24)return;
-    const en=se.energy&&se.energy<=2?1.2:1,load={};
-    se.entries.forEach(e1=>{const e=EXMAP[e1.exId];if(!e)return;const w=e1.sets.reduce((a,x)=>a+setLoad(x),0);if(!w)return;
-      GROUPS.forEach(g=>{const p=e.p.filter(m=>g.m.includes(m)).length,q=e.s.filter(m=>g.m.includes(m)).length;if(p||q)load[g.l]=(load[g.l]||0)+w*(p?1:0.5)})});
-    muscleCounts(se).forEach(([l,n])=>{const o=out[l];if(!o)return;if(se.pain===l&&now-se.startedAt<7*DAYMS)o.pain=true;if(!o.last&&n>=1){o.last=se.startedAt;o.sets=n}});
-    Object.keys(load).forEach(l=>{F[l]+=load[l]*en*Math.pow(0.5,hrs/(REC_H[l]||30))})});
-  GROUPS.forEach(g=>{const o=out[g.l],f=F[g.l];o.fat=f;o.pct=Math.max(0,Math.min(100,Math.round(100*(1-f/REC_MAX))));const h=REC_H[g.l]||30;o.need=f>REC_MAX*0.1?Math.round(h*Math.log2(f/(REC_MAX*0.1))):0});
+    muscleCounts(se).forEach(([l,n])=>{const o=out[l];if(!o)return;if(se.pain===l&&now-se.startedAt<7*DAYMS)o.pain=true;if(!o.last&&n>=1){o.last=se.startedAt;o.sets=n;const hrs=Math.max(0,(now-(se.endedAt||se.startedAt))/3600000);o.pct=Math.max(0,Math.min(100,Math.round(100*hrs/need)));o.need=Math.max(0,Math.round(need-hrs))}})});
   return out}
 function ppl28(){const from=Date.now()-28*DAYMS,c={push:0,pull:0,legs:0};S.sessions.filter(x=>x.startedAt>=from).forEach(se=>se.entries.forEach(en=>{const e=EXMAP[en.exId];if(!e)return;const n=en.sets.filter(x=>x.type!=='warmup').length,m=e.p[0];
   if(PUSHM.includes(m))c.push+=n;else if(PULLM.includes(m))c.pull+=n;else if(LEGM.includes(m))c.legs+=n}));return c}
@@ -846,7 +842,7 @@ function lcStagne(e){
   return pl.length?`**Exercices en stagnation** (3 séances sans progrès) :\n`+pl.slice(0,5).map(id=>'• '+EXMAP[id].n).join('\n')+'\n\nPistes : changer la fourchette de reps, ajouter une série, passer à une variante ou faire une semaine de décharge. Demande-moi « pourquoi je stagne au développé couché » pour un exercice précis.':'Aucun exercice en stagnation sur les 30 derniers jours. Si tu as un doute sur un exercice précis, donne-moi son nom.'}
 function lcRecup(){const rec=recovery(),G=GROUPS.filter(g=>g.id!=='avb').map(g=>[g.l,rec[g.l].pct]).sort((a,b)=>b[1]-a[1]);
   const ok=G.filter(x=>x[1]>=80).map(x=>x[0].toLowerCase()),low=G.filter(x=>x[1]<60).map(x=>x[0].toLowerCase()),pi=planInfo(),ref=pi&&pi.p.days[(new Date().getDay()+6)%7];
-  return `**Récupération** : `+G.map(x=>x[0]+' '+x[1]+' %').join(', ')+'.\n'+(ok.length?`Prêts pour une séance : ${ok.slice(0,5).join(', ')}.`:'Rien n\'est vraiment frais : une séance légère ou du repos conviennent.')+(low.length?`\nÀ ménager : ${low.join(', ')}.`:'')+(ref?`\nTa séance prévue aujourd'hui : ${refName(ref)}.`:'')+'\nDis-moi « génère une séance de 45 min » et je la construis avec ces muscles.'}
+  return `**Récupération** (temps écoulé depuis la dernière séance du groupe, rapporté à ton repos souhaité de ${recDays()} j ; ce n'est pas une mesure scientifique) : `+G.map(x=>x[0]+' '+x[1]+' %').join(', ')+'.\n'+(ok.length?`Prêts pour une séance : ${ok.slice(0,5).join(', ')}.`:'Rien n\'est vraiment frais : une séance légère ou du repos conviennent.')+(low.length?`\nÀ ménager : ${low.join(', ')}.`:'')+(ref?`\nTa séance prévue aujourd'hui : ${refName(ref)}.`:'')+'\nDis-moi « génère une séance de 45 min » et je la construis avec ces muscles.'}
 function lcSuggest(e){const g=suggest(e.id);if(!g)return `Je n'ai pas encore d'historique sur **${e.n}**. Commence avec une charge qui te laisse 2 à 3 reps en réserve sur ${e.rr.hypertrophy} reps.`;
   return `**${e.n}** : dernière fois ${fmtSet(g.last.kg,g.last.reps,g.add)}. Prochaine séance : **${fmtSet(g.kg,g.reps,g.add)}** (${g.mode==='bwtop'?'haut de la fourchette atteint : passe à une variante plus difficile ou ajoute du lest':g.mode==='charge'?'tu as atteint le haut de la fourchette '+g.lo+'-'+g.hi+', on monte la charge':'on ajoute une répétition dans la fourchette '+g.lo+'-'+g.hi})${g.plateau?'\nAttention : pas de progrès de 1RM sur 3 séances.':''}`}
 function lcRecord(e){const r=REC[e.id];if(!r)return `Aucun record enregistré sur **${e.n}** pour l'instant.`;
@@ -930,7 +926,7 @@ function coachTab(){
   return `<div class="page-head"><div class="label">Assistant</div><h1>Coach</h1></div>
   <div class="sec" style="margin-top:6px"><span class="label">Récupération par muscle</span><div class="card" style="padding:12px 16px">
    ${GROUPS.map(g=>{const o=rec[g.l];return `<div class="mbar"><span>${g.l}</span><div class="tr" role="img" aria-label="${g.l} : récupéré à ${o.pct} %"><div class="fl" style="width:${o.pct}%;${o.pct<60?'background:var(--tW)':''}"></div></div><b>${o.pct} %</b></div>`}).join('')}
-   <p class="small mute" style="margin:8px 0 0">${best.length?'Prêts pour une séance : '+best.slice(0,5).join(', ')+'. ':''}Estimation d'après le volume, les jours écoulés, l'effort perçu et ton énergie. Une gêne signalée récemment ralentit le score.</p>
+   <p class="small mute" style="margin:8px 0 0">${best.length?'Prêts pour une séance : '+best.slice(0,5).join(', ')+'. ':''}Calculé d'après le temps écoulé depuis la dernière séance de chaque groupe et le repos souhaité réglé dans les réglages (pas une mesure scientifique de ta récupération). Une gêne signalée récemment ralentit le score.</p>
    ${GROUPS.filter(g=>rec[g.l].pain).length?`<div class="sug warn" style="margin:8px 0 0"><span class="sp">Gêne signalée récemment : <b>${GROUPS.filter(g=>rec[g.l].pain).map(g=>g.l).join(', ')}</b>. Ménage cette zone ; si la douleur persiste, vois un professionnel de santé.</span></div>`:''}</div></div>
   ${injuriesHTML()}
   <div class="sec"><span class="label">Conseils du moment</span>${adv.length?adv.map(a=>`<div class="card adv"><div class="b">${esc(a.title)}</div><div class="small mute" style="margin-top:4px">${esc(a.text)}</div><div class="row">${a.apply?`<button class="btn primary" data-act="adv-apply" data-k="${esc(a.key)}">${a.label}</button>`:`<button class="btn ghost" data-act="adv-ok" data-k="${esc(a.key)}">C'est noté</button>`}<button class="btn ghost" data-act="adv-no" data-k="${esc(a.key)}">Ignorer</button></div></div>`).join(''):'<div class="card empty">Rien à signaler : continue comme ça. Les conseils (plateau, fatigue, équilibre, muscles oubliés) apparaissent ici.</div>'}</div>
@@ -1230,6 +1226,7 @@ function profileTab(){
   <div class="card" style="padding:16px;margin-top:12px"><span class="label">Séance</span>
    <div class="row" style="margin-top:10px"><span class="sp small">Son en fin de repos</span><button class="chip" data-act="sound-toggle" data-on="${!!S.prefs.sound}">${S.prefs.sound?'Activé':'Coupé'}</button></div>
    <div class="small" style="margin-top:14px">Formule du 1RM estimé</div><div class="row" style="margin-top:6px;gap:8px">${[['epley','Epley'],['brzycki','Brzycki']].map(([v,l])=>`<button class="chip sp" style="text-align:center" data-act="formula" data-v="${v}" data-on="${(S.prefs.formula||'epley')===v}">${l}</button>`).join('')}</div>
+   <div class="small" style="margin-top:14px">Repos souhaité entre deux séances d'un même groupe (réglage personnel)</div><div class="row" style="margin-top:6px;gap:8px">${[1,2,3,4].map(v=>`<button class="chip sp" style="text-align:center" data-act="rec-days" data-v="${v}" data-on="${(S.prefs.restDays||2)===v}">${v} j</button>`).join('')}</div>
    <div class="small" style="margin-top:14px">Barre</div><div class="row" style="margin-top:6px;gap:8px">${[10,15,20].map(v=>`<button class="chip sp" style="text-align:center" data-act="pl-bar" data-v="${v}" data-on="${(S.prefs.bar||20)===v}">${v} kg</button>`).join('')}</div>
    <div class="small" style="margin-top:14px">Disques disponibles (par côté)</div><div class="chips" style="margin-top:6px;flex-wrap:wrap;margin-right:0">${[25,20,15,10,5,2.5,1.25].map(v=>`<button class="chip" data-act="pl-toggle" data-v="${v}" data-on="${(S.prefs.plates||[]).includes(v)}">${fmtN(v)}</button>`).join('')}</div></div>
   <div class="card" style="padding:16px;margin-top:12px"><span class="label">Rappels</span><p class="small" style="margin:8px 0 12px">${remGet().on?'Rappels activés : séances du programme, pesée, sauvegarde.':'Rappels de séances, pesée hebdomadaire et sauvegarde mensuelle, avec export dans ton calendrier.'}</p><button class="btn ghost block" data-act="rem-edit">Régler les rappels</button></div>
@@ -1250,7 +1247,7 @@ function setRow(it,i,s,k,run){
   return `<div class="setwrap" data-s="${k}"><div class="setrow"><span class="n">${s.type==='warmup'?'W':idx}</span>
    <button class="tp" data-t="${s.type}" data-act="type" data-i="${i}" data-s="${k}" style="${s.type==='normal'?'':'background:var('+t.c+')'}" aria-label="Type de série : ${t.name}">${t.short}</button>
    <span class="prev">${prevText(it,k)}</span>
-   <input class="num" inputmode="decimal" data-f="kg" data-i="${i}" data-s="${k}" value="${s.kg==null?'':fmtN(s.kg)}" placeholder="${BWF[it.exId]?'—':'0'}" aria-label="${BWF[it.exId]?'Lest ajouté en kilos (facultatif)':'Kilos'}, série ${k+1}">
+   <input class="num" inputmode="decimal" data-f="kg" data-i="${i}" data-s="${k}" value="${s.kg==null?'':fmtN(s.kg)}" placeholder="${BWX[it.exId]?'—':'0'}" aria-label="${BWX[it.exId]?'Lest ajouté en kilos (facultatif)':'Kilos'}, série ${k+1}">
    <input class="num" inputmode="numeric" data-f="reps" data-i="${i}" data-s="${k}" value="${s.reps==null?'':s.reps}" placeholder="0" aria-label="Répétitions, série ${k+1}">
    ${run?`<button class="chk ${s.done?'on':''}" data-act="done" data-i="${i}" data-s="${k}" aria-label="Valider la série ${k+1}" aria-pressed="${!!s.done}">✓</button>`:`<button class="grip" data-grip="set" aria-label="Déplacer la série" style="width:28px;height:30px">≡</button>`}
   </div>${run?`<div class="prline" data-pl="${i}-${k}">${prlineHTML(s)}</div>`:''}${drops}</div>`}
@@ -1270,7 +1267,7 @@ function itemHTML(it,i,run){
    <span class="m"><span class="label">Séries</span><b>${counted(it).length}</b></span>
    <button data-act="tempo" data-i="${i}"><span class="label">Tempo</span><b>${it.tempo||'Aucun'}</b></button></div>
   ${varList(it.exId)?`<label class="small mute" style="display:block;margin:2px 0 6px">Variante ${varSel(it.exId,it.v,'data-var="'+i+'" style="margin-top:4px"')}</label>`:''}
-  ${run?sugHTML(it,i):''}<div class="sets"><div class="sethead"><span class="label">#</span><span class="label">Type</span><span class="label">Préc.</span><span class="label">${BWF[it.exId]?'Lest':'Kg'}</span><span class="label">Reps</span><span></span></div>
+  ${run?sugHTML(it,i):''}<div class="sets"><div class="sethead"><span class="label">#</span><span class="label">Type</span><span class="label">Préc.</span><span class="label">${BWX[it.exId]?'Lest':'Kg'}</span><span class="label">Reps</span><span></span></div>
    ${it.sets.map((s,k)=>setRow(it,i,s,k,run)).join('')}</div>
   <button class="dashed" data-act="add-set" data-i="${i}">+ Ajouter une série</button></article>`}
 function editorView(){
@@ -1310,7 +1307,7 @@ function stepper2HTML(i,k,run){const s=E().draft.items[i].sets[k];
 function hideStepper(){$$('.stepper,.stepper2').forEach(x=>x.remove())}
 function showStepper(inp){
   hideStepper();const wrap=inp.closest('.setwrap');if(!wrap||inp.closest('.drops'))return;
-  const d=document.createElement('div');d.className='stepper';d.dataset.i=inp.dataset.i;d.dataset.s=inp.dataset.s;{const ee=E(),itx=ee&&ee.draft.items[+inp.dataset.i];d.innerHTML=stepperHTML(!!(itx&&BWF[itx.exId]))}
+  const d=document.createElement('div');d.className='stepper';d.dataset.i=inp.dataset.i;d.dataset.s=inp.dataset.s;{const ee=E(),itx=ee&&ee.draft.items[+inp.dataset.i];d.innerHTML=stepperHTML(!!(itx&&BWX[itx.exId]))}
   wrap.querySelector('.setrow').after(d);
   const e=E();d.insertAdjacentHTML('afterend',stepper2HTML(+inp.dataset.i,+inp.dataset.s,e&&e.mode==='run'));
 }
@@ -1445,7 +1442,7 @@ function exSheet(id){
    ${e.sf.length?`<div class="sec-t label">Sécurité</div><ul class="bl">${e.sf.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>`:''}
    <div class="sec-t label">Paramètres conseillés</div><div class="tri"><div><span class="label">Force</span><b>${e.rr.strength}</b></div><div><span class="label">Masse</span><b>${e.rr.hypertrophy}</b></div><div><span class="label">Endurance</span><b>${e.rr.endurance}</b></div></div>
    <p class="mute small" style="margin:8px 0 0">Repos ${restLabel(e.rest)} · Tempo ${esc(e.tp||'libre')}</p>
-   ${BWF[id]?`<p class="mute small" style="margin:6px 0 0">Poids de corps pris en compte : ${Math.round(BWF[id]*100)} %${bwAt(Date.now())?' (≈ '+fmtN(Math.round(BWF[id]*bwAt(Date.now())*10)/10)+' kg pour '+fmtN(bwAt(Date.now()))+' kg)':''}. Le poids saisi dans la séance est le lest ajouté.</p>`:''}
+   ${BWF[id]?`<p class="mute small" style="margin:6px 0 0">Poids de corps pris en compte : ${Math.round(BWF[id]*100)} %${bwAt(Date.now())?' (≈ '+fmtN(Math.round(BWF[id]*bwAt(Date.now())*10)/10)+' kg pour '+fmtN(bwAt(Date.now()))+' kg)':''}. Source : Ebben et al. 2011. Le poids saisi dans la séance est le lest ajouté.</p>`:''}
    ${variantsHTML(e)}
    ${alts.length?`<div class="sec-t label">Alternatives (même muscle)</div>${alts.map(a=>`<button class="altrow" data-act="ex-alt" data-id="${a.id}"><span class="sp"><span class="b" style="display:block;font-size:14px">${esc(a.n)}</span><span class="mute small">${esc(a.eq)}</span></span>${starsHTML(stars(a))}</button>`).join('')}`:''}
    <div class="sec-t label">Mes réglages</div><div class="card" style="padding:14px"><div class="row" style="justify-content:space-between"><span class="small">Ma note ★</span><div class="rate">${[1,2,3,4,5].map(n=>`<button data-act="rate-s" data-id="${id}" data-v="${n}" data-on="${sv===n}">${n}</button>`).join('')}</div></div>
@@ -1541,7 +1538,7 @@ function progSheet(sh){
    <div class="chips" style="margin:8px 0 6px;margin-right:0;flex-wrap:wrap">${RANGES.map(([k,l])=>`<button class="chip" data-act="prog-range" data-v="${k}" data-on="${sh.range===k}">${l}</button>`).join('')}</div>
    <div class="card" style="padding:10px 6px 6px">${chartSVG(pts,m[2])}</div>
    <div id="ch-tip" class="tip mute" aria-live="polite">${pts.length?'Touche un point pour voir la séance.':''}</div>
-   ${fr?(eff?`<p class="mute small" style="margin:8px 0 0">Charges calculées avec ton poids de corps (${fmtN(bwn)} kg) × ${Math.round(fr*100)} % pour cet exercice, plus le lest saisi. Estimation.</p>`:`<div class="sug warn" style="margin:8px 0 0"><span class="sp">Ajoute ton <b>poids de corps</b> (Progrès > Suivi corporel) pour calculer la charge équivalente et le 1RM de cet exercice.</span></div>`):''}
+   ${fr?(eff?`<p class="mute small" style="margin:8px 0 0">Charges calculées avec ton poids de corps (${fmtN(bwn)} kg) × ${Math.round(fr*100)} % pour cet exercice, plus le lest saisi. Source : Ebben et al. 2011 (force sur les mains, en % du poids du corps).</p>`:`<div class="sug warn" style="margin:8px 0 0"><span class="sp">Ajoute ton <b>poids de corps</b> (Progrès > Suivi corporel) pour calculer la charge équivalente et le 1RM de cet exercice.</span></div>`):''}
    <div class="sec-t label">Records personnels</div><div class="card" style="padding:4px 14px">
     ${isBw?'':rec(eff?'Charge totale max (poids de corps + lest)':'Meilleur poids',bestKg.kg?fmtN(bestKg.kg)+' kg':'—',bestKg.t)+rec(eff?'Meilleur 1RM équivalent':'Meilleur 1RM estimé',best1.e1?Math.round(best1.e1)+' kg':'—',best1.t)+rec('Reps max à '+(topW?fmtN(topW)+' kg':'—'),bestR.r?bestR.r+' reps':'—',bestR.t)+rec('Meilleur volume de séance',bestV.vol?Math.round(bestV.vol).toLocaleString('fr-FR')+' kg':'—',bestV.t)}${all.some(x=>x.rmax>0)?rec('Record de répétitions (une série, sans charge)',bestRM.rmax+' reps',bestRM.t)+rec('Total de reps sur une séance',bestTot.tot+' reps',bestTot.t):''}</div>
    ${all.length>=2?cmpSessHTML(sh,all):''}
@@ -1842,10 +1839,11 @@ const A={
   'rep-range'(){repMonth=!repMonth;render()},
   'hm-range'(){hmYear=!hmYear;render()},
   formula(el){S.prefs.formula=el.dataset.v;persist('prefs');buildPrev();render()},
+  'rec-days'(el){S.prefs.restDays=+el.dataset.v;persist('prefs');render()},
   'ses-edit'(el){const se=S.sessions.find(x=>x.id===el.dataset.id);if(se)openSheet({k:'sesedit',d:clone(se)})},
-  'se-set-add'(el){const en=S.sheet.d.entries[+el.dataset.i],l=en.sets[en.sets.length-1];en.sets.push({type:'normal',kg:l?l.kg:(BWF[en.exId]?0:null),reps:l?l.reps:null});renderOv()},
+  'se-set-add'(el){const en=S.sheet.d.entries[+el.dataset.i],l=en.sets[en.sets.length-1];en.sets.push({type:'normal',kg:l?l.kg:(BWX[en.exId]?0:null),reps:l?l.reps:null});renderOv()},
   'se-ex-del'(el){S.sheet.d.entries.splice(+el.dataset.i,1);renderOv()},
-  'se-ex-add'(el){const d=S.sheet.d,id=el.dataset.id,e0=EXMAP[id];if(!e0)return;d.entries.push({exId:id,note:'',sets:Array.from({length:3},()=>({type:'normal',kg:BWF[id]?0:null,reps:null}))});S.sheet.q='';renderOv();const pb=$('.pbody',$('#ov'));if(pb)pb.scrollTop=pb.scrollHeight;toast(e0.n+' ajouté : renseigne les répétitions')},
+  'se-ex-add'(el){const d=S.sheet.d,id=el.dataset.id,e0=EXMAP[id];if(!e0)return;d.entries.push({exId:id,note:'',sets:Array.from({length:3},()=>({type:'normal',kg:BWX[id]?0:null,reps:null}))});S.sheet.q='';renderOv();const pb=$('.pbody',$('#ov'));if(pb)pb.scrollTop=pb.scrollHeight;toast(e0.n+' ajouté : renseigne les répétitions')},
   'se-set-del'(el){const d=S.sheet.d,en=d.entries[+el.dataset.i];en.sets.splice(+el.dataset.j,1);if(!en.sets.length)d.entries.splice(+el.dataset.i,1);renderOv()},
   'ses-edit-save'(){const d=S.sheet.d,i=S.sessions.findIndex(x=>x.id===d.id);if(i<0)return;d.entries.forEach(en=>{en.sets=en.sets.filter(x=>x.type==='warmup'||x.reps>0||x.kg>0)});d.entries=d.entries.filter(en=>en.sets.length);if(!d.entries.length){toast('Une séance doit garder au moins une série');return}
     if(d.manual){let t=d.startedAt+120000;d.entries.forEach(en=>{const r=en.rest!=null?en.rest:(d.rest||90);en.sets.forEach(x=>{t+=(45+r)*1000;x.at=t})});if(d.endedAt<t)d.endedAt=t+180000}

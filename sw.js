@@ -1,5 +1,5 @@
 /* Iron Log : fonctionne hors-ligne. Page en « réseau d'abord » (toujours à jour si connecté), le reste en « cache d'abord ». */
-const CACHE = 'il-v23';
+const CACHE = 'il-v24';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== CACHE).map(x => caches.delete(x)))).then(() => self.clients.claim())); });
